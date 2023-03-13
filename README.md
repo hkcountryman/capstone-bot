@@ -50,7 +50,9 @@ Under the run and debug tab, select "create a launch.json file" and select "Pyth
 
 ### Dependencies
 
-You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html). Inside this repository, run `python3 -m venv venv` followed by, on Unix-based systems, `. ./venv/bin/activate` or, on Windows, `venv\Scripts\activate.bat`. Then install the dependencies with `pip install -r requirements.txt`. **Any time you add a dependency, it must be added to `requirements.txt` via `pip freeze > requirements.txt`.**
+You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html). Inside this repository, run `python3 -m venv venv` followed by, on Unix-based systems, `. ./venv/bin/activate` or, on Windows, `venv\Scripts\activate.bat`. Then install the dependencies with `pip install -r requirements.txt`. **Any time you add a dependency, it must be added to `requirements.txt` via `pip freeze > requirements.txt`.** You won't need to reinstall dependencies unless they change and you won't need to recreate the virtual environment, but it must be activated each time you want to develop or run the server.
+
+After activating the virtual environment, run `pre-commit install` to create a pre-commit git hook script. You should only need to do this once. Every time you commit, it may reformat your docstrings, meaning you may need to commit again. Try to keep these confined within an 80 character line; pylint will remind you but unfortunately I can't find a good way to handle the formatting.
 
 ## Running
 
