@@ -81,7 +81,7 @@ Notice that some of the values of the environment variables are left up to you t
 - `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below)
 - `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page
 
-(image)
+![image](https://user-images.githubusercontent.com/62478826/225091129-7480cb50-223e-4e53-b801-dafcd1e3442d.png)
 
 Now you can run the server from inside the IDE.
 
@@ -97,7 +97,7 @@ After activating the virtual environment, run `pre-commit install` to create a p
 
 If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE.
 
-Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under "Set Up". In Bash, do
+Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). In Bash, do
 
 ```bash
 export TWILIO_NUMBER="<phone number>"
