@@ -60,9 +60,9 @@ Also create `.vscode/launch.json` with the following:
             "env": {
                 "FLASK_APP": "app.py",
                 "FLASK_DEBUG": "1",
-                "TWILIO_NUMBER": "+14155238886",
-                "TWILIO_ACCOUNT_SID": "ACef099c27b98ddc3a910d6564f6e53a8d",
-                "TWILIO_AUTH_TOKEN": "1cdb9b74debb4eb6ed7cbb3fc5f26379"
+                "TWILIO_NUMBER": "<phone number>",
+                "TWILIO_ACCOUNT_SID": "<account SID>",
+                "TWILIO_AUTH_TOKEN": "<auth token>"
             },
             "args": [
                 "run",
@@ -75,6 +75,14 @@ Also create `.vscode/launch.json` with the following:
 }
 ```
 
+Notice that some of the values of the environment variables are left up to you to populate:
+
+- `TWILIO_NUMBER`: your phone number with no punctuation except for the "+" before the country code, e.g., if your number is 1(200)555-5555, use "+12005555555"
+- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below)
+- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page
+
+(image)
+
 Now you can run the server from inside the IDE.
 
 ### Dependencies
@@ -85,13 +93,11 @@ After activating the virtual environment, run `pre-commit install` to create a p
 
 ## Running
 
+### Starting the Flask server
+
 If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE.
 
-Otherwise, first set some environment variables: `TWILIO_NUMBER` will be your phone number with no punctuation except for the "+" before the country code, e.g., if your number is 1(200)555-5555, use "+12005555555"; `TWILIO_ACCOUNT_SID` will be your account SID from your Twilio Console's "Get Set Up" page (see below), and `TWILIO_AUTH_TOKEN` will be your account auth token, also from your "Get Set Up" page.
-
-(image)
-
-In Bash, do
+Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under "Set Up". In Bash, do
 
 ```bash
 export TWILIO_NUMBER="<phone number>"
@@ -102,6 +108,8 @@ export TWILIO_AUTH_TOKEN="<auth token>"
 In Windows PowerShell, the process would be similar, but the syntax would be, for example, `$env:TWILIO_NUMBER='<phone number>'`. In Windows Command Prompt, the syntax is simply `set TWILIO_NUMBER=<phone number>`.
 
 Then use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
+
+### Exposing the server publically with ngrok
 
 Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`. Copy the forwarding URL from the output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 
