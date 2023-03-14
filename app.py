@@ -1,29 +1,54 @@
-"""A simple WhatsApp bot."""
+"""A Flask server for the WhatsApp chatbot.
 
-from flask import Flask, Response, request
-from twilio.twiml.messaging_response import MessagingResponse
+This module handles the route to make requests to the bot.
+"""
+
+from typing import Tuple
+
+from flask import Flask, Request, request
+
+from chatbot import Chatbot, mr_botty
 
 app = Flask(__name__)
+"""The server running the chatbot."""
 
 
-@app.route("/bot", methods=["POST"])
-def bot() -> Response:
-    """Bot's response to a request.
+# TODO: functions to determine whether message is message to the group or a
+# bot command. May use switch case to parse first word of message once
+# trimmed of leading whitespace. I'm thinking
+#
+# See match case in Chatbot.process_cmd for my thoughts.
 
-    In this function, you can refer to the identifier `request` to access the
-    object of type flask.Request:
-    https://flask.palletsprojects.com/en/2.2.x/reqcontext/
-    https://flask.palletsprojects.com/en/2.2.x/api/#flask.Request
+
+def get_incoming_msg(req: Request) -> Tuple(str, str):
+    """Get an incoming message sent to the bot.
+
+    Arguments:
+        req -- Flask Request object
 
     Returns:
-        the bot's response.
+        The first word of and the entirety of the message contents from a POST
+            request to the bot as a tuple.
     """
-    # Defaults to "", type str:
-    incoming_msg = request.values.get("Body", "", str)
+    msg = req.values.get("Body", "/say", str).strip()
+    word_1 = msg.split()[0].lower()
+    return (word_1, msg)
 
-    resp = MessagingResponse()
-    msg = resp.message()
-    msg.body('You said: "' + incoming_msg + '"')
-    msg.media("/static/imgs/cat.png")
 
-    return str(resp)
+# TODO: theoretically we could support multiple bots on one server, but
+# they'd each need their own routing. Use case for blueprints? Might also
+# want to try the routes as keys in a dictionary containing Chatbot objects.
+@app.route("/bot", methods=["POST"])
+def bot() -> str:
+    """Bot's response to a request.
+
+    Returns:
+        The bot's response.
+    """
+    (cmd, msg) = get_incoming_msg(request)
+    # TODO: could return Chatbot.process_cmd(cmd, msg)
+
+    # Test: texting me and my mom a message :) it works!
+    # mr_botty.push("This is a push message from Halle. Hi!", [
+    #               "+15106485015", "+15104104268"])
+    return mr_botty.reply('You said: "' + msg + '"')

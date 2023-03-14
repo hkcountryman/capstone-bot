@@ -1,4 +1,8 @@
-"""Serve static content at /static/imgs/[image name]."""
+"""Serve static content at /static/imgs/[image name].
+
+A twillio.twiml.messaging_response.MessagingResponse object `msg` may include an
+image by setting, for example, `msg.media("/static/imgs/cat.png")`.
+"""
 
 from flask import Blueprint
 
