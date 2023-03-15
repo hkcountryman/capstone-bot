@@ -25,6 +25,17 @@ def bot():
         # return a cat pic
         msg.media('https://cataas.com/cat')
         responded = True
+    if 'hello' in incoming_msg:
+        # check language
+        if 'english' in incoming_msg:
+            msg.body('hi!')
+        elif 'spanish' in incoming_msg:
+            msg.body('hola!')
+        elif 'chinese' in incoming_msg:
+            msg.body('ni hao!')
+        else:
+            msg.body('I do not know how to say hello back!')
+        responded = True
     if not responded:
         msg.body('I only know about famous quotes and cats, sorry!')
     return str(resp)
