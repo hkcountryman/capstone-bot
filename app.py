@@ -1,4 +1,5 @@
 """A simple WhatsApp bot."""
+# Suhib Nasif Tutorial complete
 
 from flask import Flask, Response, request
 from twilio.twiml.messaging_response import MessagingResponse
