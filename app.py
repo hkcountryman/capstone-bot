@@ -7,7 +7,7 @@ from typing import Tuple
 
 from flask import Flask, Request, request
 
-from chatbot import Chatbot, mr_botty
+from chatbot import Chatbot, consts, mr_botty
 
 app = Flask(__name__)
 """The server running the chatbot."""
@@ -20,19 +20,21 @@ app = Flask(__name__)
 # See match case in Chatbot.process_cmd for my thoughts.
 
 
-def get_incoming_msg(req: Request) -> Tuple(str, str):
-    """Get an incoming message sent to the bot.
+def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
+    """Get an incoming message sent to the bot and its sender.
 
     Arguments:
         req -- Flask Request object
 
     Returns:
         The first word of and the entirety of the message contents from a POST
-            request to the bot as a tuple.
+            request to the bot as well as the sender contact info and name.
     """
-    msg = req.values.get("Body", "/say", str).strip()
+    msg = req.values.get("Body", default=consts.DRAFT_MSG, type=str).strip()
     word_1 = msg.split()[0].lower()
-    return (word_1, msg)
+    sender_contact = request.values.get("From", type=str)
+    sender_name = request.values.get("ProfileName", type=str)
+    return (word_1, msg, sender_contact, sender_name)
 
 
 # TODO: theoretically we could support multiple bots on one server, but
@@ -45,10 +47,21 @@ def bot() -> str:
     Returns:
         The bot's response.
     """
-    (cmd, msg) = get_incoming_msg(request)
-    # TODO: could return Chatbot.process_cmd(cmd, msg)
-
-    # Test: texting me and my mom a message :) it works!
-    # mr_botty.push("This is a push message from Halle. Hi!", [
-    #               "+15106485015", "+15104104268"])
+    # request.values:
+    # 'SmsMessageSid', 'SM365da26a1c92746da810854c457380ff'
+    # 'NumMedia', '0'
+    # 'ProfileName', 'Halle Countryman'
+    # 'SmsSid', 'SM365da26a1c92746da810854c457380ff'
+    # 'WaId', '15104104268'
+    # 'SmsStatus', 'received'
+    # 'Body', 'Request'
+    # 'To', 'whatsapp:+14155238886'
+    # 'NumSegments', '1'
+    # 'ReferralNumMedia', '0'
+    # 'MessageSid', 'SM365da26a1c92746da810854c457380ff'
+    # 'AccountSid', 'ACef099c27b98ddc3a910d6564f6e53a8d'
+    # 'From', 'whatsapp:+15104104268'
+    # 'ApiVersion', '2010-04-01'
+    (cmd, msg, sender_contact, sender_name) = get_incoming_msg(request)
+    # TODO: return Chatbot.process_cmd(cmd, msg, sender_contact, sender_name)
     return mr_botty.reply('You said: "' + msg + '"')
