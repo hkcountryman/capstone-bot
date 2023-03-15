@@ -47,21 +47,6 @@ def bot() -> str:
     Returns:
         The bot's response.
     """
-    # request.values:
-    # 'SmsMessageSid', 'SM365da26a1c92746da810854c457380ff'
-    # 'NumMedia', '0'
-    # 'ProfileName', 'Halle Countryman'
-    # 'SmsSid', 'SM365da26a1c92746da810854c457380ff'
-    # 'WaId', '15104104268'
-    # 'SmsStatus', 'received'
-    # 'Body', 'Request'
-    # 'To', 'whatsapp:+14155238886'
-    # 'NumSegments', '1'
-    # 'ReferralNumMedia', '0'
-    # 'MessageSid', 'SM365da26a1c92746da810854c457380ff'
-    # 'AccountSid', 'ACef099c27b98ddc3a910d6564f6e53a8d'
-    # 'From', 'whatsapp:+15104104268'
-    # 'ApiVersion', '2010-04-01'
     (cmd, msg, sender_contact, sender_name) = get_incoming_msg(request)
     # TODO: return Chatbot.process_cmd(cmd, msg, sender_contact, sender_name)
     return mr_botty.reply('You said: "' + msg + '"')
