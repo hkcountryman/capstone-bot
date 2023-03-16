@@ -20,7 +20,7 @@ app = Flask(__name__)
 # See match case in Chatbot.process_cmd for my thoughts.
 
 
-def get_incoming_msg(req: Request) -> Tuple(str, str):
+def get_incoming_msg(req: Request) -> Tuple[str, str]:
     """Get an incoming message sent to the bot.
 
     Arguments:
