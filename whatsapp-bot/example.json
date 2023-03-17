@@ -1,0 +1,26 @@
+{
+  "Kevin": {
+    "age": 100,
+      "hobbies": ["video games", "ultimate frisbee"],
+    "appearance": {
+      "hair_color": "black",
+      "weight": "350"
+    }
+  },
+  "Person2": {
+    "age": 300,
+      "hobbies": ["reading"],
+    "appearance": {
+      "hair_color": "white",
+      "weight": "1000"
+    }
+  },
+  "Person3": {
+    "age": 200,
+      "hobbies": ["hiking"],
+    "appearance": {
+      "hair_color": "green",
+      "weight": "1"
+    }
+  }
+}
