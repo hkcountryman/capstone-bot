@@ -1,3 +1,5 @@
+# mypy: disable-error-code=import
+
 """Basic functionality for a WhatsApp chatbot.
 
 This module contains the class definition to create Chatbot objects, each of
