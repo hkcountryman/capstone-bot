@@ -60,7 +60,7 @@ Also create `.vscode/launch.json` with the following:
             "env": {
                 "FLASK_APP": "app.py",
                 "FLASK_DEBUG": "1",
-                "TWILIO_NUMBER": "<phone number>",
+                "TWILIO_NUMBER": "+14155238886",
                 "TWILIO_ACCOUNT_SID": "<account SID>",
                 "TWILIO_AUTH_TOKEN": "<auth token>"
             },
@@ -77,7 +77,7 @@ Also create `.vscode/launch.json` with the following:
 
 Notice that some of the values of the environment variables are left up to you to populate:
 
-- `TWILIO_NUMBER`: your sandbox phone number with no punctuation except for the "+" before the country code, e.g., if the number is 1(200)555-5555, use "+12005555555"
+- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code
 - `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below)
 - `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page
 
