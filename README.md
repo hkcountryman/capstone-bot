@@ -58,7 +58,7 @@ After activating the virtual environment, run `pre-commit install` to create a p
 
 If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE. Otherwise, use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
 
-Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`. Copy the forwarding URL from the output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
+Next, use ngrok to expose a temporary, public URL for the server: run `ngrok authtoken <YOUR_AUTHTOKEN>` with `<YOUR_AUTHTOKEN>` replaced with the authentication token retrieved from the dashboard, then run `ngrok http 5000`. Copy the forwarding URL from the output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 
 ![image](https://user-images.githubusercontent.com/62478826/224860669-ad7b0ce5-1bd3-4803-a622-3da0ae7f0d28.png)
 
