@@ -4,7 +4,7 @@
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.10+
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
 - [ngrok](https://ngrok.com/)
@@ -46,7 +46,44 @@ Create a `.vscode/` directory and add a `settings.json` inside it. Set the relev
 }
 ```
 
-Under the run and debug tab, select "create a launch.json file" and select "Python" "Flask" to create `.vscode/launch.json`. Change the value of `"args"` to `["run", "--debugger"]`. Now you can run the server from inside the IDE.
+Also create `.vscode/launch.json` with the following:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "app.py",
+                "FLASK_DEBUG": "1",
+                "TWILIO_NUMBER": "+14155238886",
+                "TWILIO_ACCOUNT_SID": "<account SID>",
+                "TWILIO_AUTH_TOKEN": "<auth token>"
+            },
+            "args": [
+                "run",
+                "--debugger",
+            ],
+            "jinja": true,
+            "justMyCode": true
+        }
+    ]
+}
+```
+
+Notice that some of the values of the environment variables are left up to you to populate:
+
+- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code
+- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below)
+- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page
+
+![image](https://user-images.githubusercontent.com/62478826/225091129-7480cb50-223e-4e53-b801-dafcd1e3442d.png)
+
+Now you can run the server from inside the IDE.
 
 ### Dependencies
 
@@ -56,7 +93,23 @@ After activating the virtual environment, run `pre-commit install` to create a p
 
 ## Running
 
-If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE. Otherwise, use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
+### Starting the Flask server
+
+If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE.
+
+Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). In Bash, do
+
+```bash
+export TWILIO_NUMBER="<phone number>"
+export TWILIO_ACCOUNT_SID="<account SID>"
+export TWILIO_AUTH_TOKEN="<auth token>"
+```
+
+In Windows PowerShell, the process would be similar, but the syntax would be, for example, `$env:TWILIO_NUMBER='<phone number>'`. In Windows Command Prompt, the syntax is simply `set TWILIO_NUMBER=<phone number>`.
+
+Then use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
+
+### Exposing the server publically with ngrok
 
 Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`. Copy the forwarding URL from the output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 

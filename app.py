@@ -1,29 +1,44 @@
-"""A simple WhatsApp bot."""
+"""A Flask server for the WhatsApp chatbot.
 
-from flask import Flask, Response, request
-from twilio.twiml.messaging_response import MessagingResponse
+This module handles the route to make requests to the bot.
+"""
+
+from typing import Tuple
+
+from flask import Flask, Request, request
+
+from chatbot import mr_botty
 
 app = Flask(__name__)
+"""The server running the chatbot."""
 
 
-@app.route("/bot", methods=["POST"])
-def bot() -> Response:
-    """Bot's response to a request.
+def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
+    """Get an incoming message sent to the bot and its sender.
 
-    In this function, you can refer to the identifier `request` to access the
-    object of type flask.Request:
-    https://flask.palletsprojects.com/en/2.2.x/reqcontext/
-    https://flask.palletsprojects.com/en/2.2.x/api/#flask.Request
+    Arguments:
+        req -- Flask Request object
 
     Returns:
-        the bot's response.
+        The message contents from a POST request to the bot as well as the
+            sender contact info and name.
     """
-    # Defaults to "", type str:
-    incoming_msg = request.values.get("Body", "", str)
+    msg = req.values.get("Body", default="Hello, world", type=str).strip()
+    sender_contact = request.values.get("From", type=str)
+    sender_name = request.values.get("ProfileName", type=str)
+    return (msg, sender_contact, sender_name)
 
-    resp = MessagingResponse()
-    msg = resp.message()
-    msg.body('You said: "' + incoming_msg + '"')
-    msg.media("/static/imgs/cat.png")
 
-    return str(resp)
+# TODO: theoretically we could support multiple bots on one server, but
+# they'd each need their own routing. Use case for blueprints? Might also
+# want to try the routes as keys in a dictionary containing Chatbot objects.
+@app.route("/bot", methods=["POST"])
+def bot() -> str:
+    """Bot's response to a request.
+
+    Returns:
+        The bot's response.
+    """
+    (msg, sender_contact, sender_name) = get_incoming_msg(request)
+    # TODO: return mr_botty.process_msg(msg, sender_contact, sender_name)
+    return mr_botty.reply('You said: "' + msg + '"')
