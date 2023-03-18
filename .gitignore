@@ -131,3 +131,4 @@ dmypy.json
 # Other
 .vscode/
 **/.DS_Store
+start.sh
