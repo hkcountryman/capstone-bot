@@ -51,4 +51,6 @@ def bot() -> str:
     # Test: texting me and my mom a message :) it works!
     # mr_botty.push("This is a push message from Halle. Hi!", [
     #               "+15106485015", "+15104104268"])
-    return mr_botty.reply('You said: "' + msg + '"')
+    translated_msg = mr_botty.translate(msg, "es")
+    response = mr_botty.reply(f'You said: "{msg}". Translated to Spanish: "{translated_msg}"')
+    return response

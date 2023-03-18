@@ -11,6 +11,7 @@ from typing import List
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
+import requests
 
 class Chatbot:
     """The chatbot logic.
@@ -51,9 +52,33 @@ class Chatbot:
             number -- Phone number the bot texts from
             subscribers -- Path to a JSON file containing subscriber data
         """
+        self.translate_api_url = "https://libretranslate.de/translate"
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.subscribers = subscribers
+
+    def translate(self, text: str, target_lang: str) -> str:
+        """Translate text to the target language using the LibreTranslate API.
+
+        Arguments:
+            text -- The text to be translated
+            target_lang -- The target language code (e.g., 'en', 'es', 'fr', etc.)
+
+        Returns:
+            Translated text
+        """
+        payload = {"q": text, "source": "auto", "target": target_lang}
+        try:
+            response = requests.post(self.translate_api_url, data=payload)
+            if response.status_code == 200:
+                translated_text = response.json()["translatedText"]
+                return translated_text
+            else:
+                print(f"Error: {response.status_code}")
+                return f"Translation failed: {text}"
+        except Exception as e:
+            print(f"Error: {e}")
+            return f"Translation failed: {text}"
 
     def reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -89,7 +114,7 @@ class Chatbot:
     # with "/say" or no slash command, it can be assumed to be a message to
     # the group.
     @staticmethod
-    def process_cmd(cmd: str, msg: str = None) -> str:
+    def process_cmd(self, cmd: str, msg: str = None) -> str:
         """Process a bot command.
 
         Arguments:
@@ -125,7 +150,11 @@ class Chatbot:
                 # lang and show them the result; do not clear it
                 # TODO: if json file does not have a message for this user, set
                 # user's preferred language to lang
-                pass
+                if msg is not None:  # if a message is provided
+                    translated_msg = self.translate(msg, lang)
+                    return f"Translated message: {translated_msg}"
+                else:  # if no message is provided
+                    return f"Set preferred language to: {lang}"
         return ""  # TODO: whatever is returned is sent to user who sent command
 
 
