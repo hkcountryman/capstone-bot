@@ -215,7 +215,7 @@ class Chatbot:
                     pass
                 case _:  # just send a message
                     # TODO: actually send, put the translate logic in send
-                    translated_msg = self.translate(msg, lang)
+                    translated_msg = self.translate_to(msg, "es")
                     return f"Translated message: {translated_msg}"
         return ""  # TODO: whatever is returned is sent to user who sent command
 
