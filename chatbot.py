@@ -8,21 +8,28 @@ instance of such a chatbot for import by the Flask app.
 import json
 import os
 from types import SimpleNamespace
-from typing import List
+from typing import Dict, List
 
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
-# Constant strings for bot commands
 consts = SimpleNamespace()
-consts.DRAFT_MSG = "/say"
-consts.SEND_MSG = "/y"
-consts.CANCEL_MSG = "/n"
-consts.UNSUBSCRIBE = "/unsubscribe"
-consts.CZECH = "/czech"
-consts.ENGLISH = "/english"
-consts.SPANISH = "/spanish"
-consts.UKRANIAN = "/ukranian"
+# Constant strings for bot commands
+consts.TEST = "/test"  # test translate
+consts.ADD = "/add"  # add user
+consts.REMOVE = "/remove"  # remove user
+consts.ADMIN = "/admin"  # toggle admin vs. user role for user
+consts.LIST = "/list"  # list all users
+consts.LANG = "/lang"  # set language for user
+# Roles for users in JSON file
+consts.USER = "user"  # can only execute test translation command
+consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
+consts.SUPER = "super"  # can execute all slash commands, no limits
+# Languages
+consts.CZECH = "czech"
+consts.ENGLISH = "english"
+consts.SPANISH = "spanish"
+consts.UKRANIAN = "ukranian"
 
 
 class Chatbot:
@@ -44,14 +51,19 @@ class Chatbot:
     """
 
     commands = [
-        consts.DRAFT_MSG,
-        consts.SEND_MSG,
-        consts.CANCEL_MSG,
-        consts.UNSUBSCRIBE,
-        consts.CZECH,
-        consts.ENGLISH,
-        consts.SPANISH,
-        consts.UKRANIAN]
+        consts.TEST,
+        consts.ADD,
+        consts.REMOVE,
+        consts.ADMIN,
+        consts.LIST,
+        consts.LANG]
+
+    languages = [consts.CZECH, consts.ENGLISH, consts.SPANISH, consts.UKRANIAN]
+
+    test_err = "".join([
+        "Please provide a valid language to test with. Example:\n" +
+        "\t/test spanish Hello everybody!\nValid languages:"
+    ] + list(map(lambda l: ("\n" + l.capitalize()), languages)))
 
     def __init__(
             self,
@@ -104,63 +116,82 @@ class Chatbot:
                 body=msg_body)
             print(msg.sid)
 
-    # TODO: Idea: slash commands with an optional /say command, like how you
-    # can preface a message in an IRC client with "/say" in order to send a
-    # message that may even start with a slash command. If the message starts
-    # with "/say" or no slash command, it can be assumed to be a message to
-    # the group.
     @staticmethod
-    def process_cmd(
-            cmd: str,
+    def translate_to(msg: str, lang: str) -> str:
+        # TODO: translate to given language
+        return ""
+
+    @staticmethod
+    def test_translate(msg: str, sender: Dict[str, str]):
+        """Translate a string to a language, then to a user's native language.
+
+        Arguments:
+            msg -- message to translate
+            sender -- user requesting the translation
+
+        Returns:
+            The translated message.
+        """
+        try:
+            lang = msg.split()[1].lower()
+            if lang not in Chatbot.languages:
+                return Chatbot.test_err
+        except IndexError:
+            return Chatbot.test_err
+        # Translate to requested language then back to native language
+        translated = Chatbot.translate_to(
+            "".join(msg.split()[2:]), lang)
+        return Chatbot.translate_to(translated, sender["lang"])
+
+    def process_msg(
+            self,
             msg: str,
             sender_contact: str,
             sender_name: str) -> str:
         """Process a bot command.
 
         Arguments:
-            cmd -- the command to process
-            msg -- the entire message sent to the bot
+            msg -- the message sent to the bot
             sender_contact -- the WhatsApp contact info of the sender
             sender_name -- the WhatsApp profile name of the sender
 
         Returns:
             A string suitable for returning from a Flask route endpoint.
         """
-        # Ensure command is valid; if not, assume it was just the first word in
-        # a message:
-        c = consts.DRAFT_MSG if cmd not in Chatbot.commands else cmd
-        # If message exists and starts with "/say", trim that:
-        m = msg[len(consts.DRAFT_MSG):].strip(
-        ) if cmd == consts.DRAFT_MSG else msg
-        # TODO: confirm sender is among self.subscribers keys and add them if
-        # not
-        match c:
-            case consts.DRAFT_MSG:  # say a message to the group
-                # TODO: update json file to contain message, do not send but
-                # prompt user to confirm and send or enter further commands
+        try:
+            sender = self.subscribers[sender_contact]
+            role = sender["role"]
+        except KeyError:
+            return ""  # ignore; they aren't subscribed
+
+        word_1 = msg.split()[0].lower()
+        if role == consts.USER:
+            if word_1 == consts.TEST:  # test translate
+                return Chatbot.test_translate(msg, sender)
+            else:  # just send a message
+                # TODO:
                 pass
-            case consts.SEND_MSG:  # proceed to send message
-                # TODO: if self.subscribers has a message for this user,
-                # translate and send to all keys of self.subscribers except
-                # that matching sender, then set self.subscribers[sender][msg]
-                # to None
-                pass
-            case consts.CANCEL_MSG:  # cancel sending message
-                # TODO: if self.subscribers has a message for this user, then
-                # set self.subscribers[sender][msg] to None
-                pass
-            case consts.UNSUBSCRIBE:  # unsubscribe from bot
-                # TODO: remove this user from self.subscribers and inform them
-                # they can text the bot again to re-subscribe
-                pass
-            case language:  # other commands must be language names
-                lang = c[1:]  # remove leading slash
-                # TODO: if self.subscribers has a message for this user,
-                # translate to lang and show them the result; do not alter
-                # self.subscribers[sender][msg]
-                # TODO: if self.subscribers does not have a message for this
-                # user, set self.subscribers[sender][lang] to lang
-                pass
+        else:
+            match word_1:
+                case consts.TEST:  # test translate
+                    return Chatbot.test_translate(msg, sender)
+                case consts.ADD:  # add user to subscribers
+                    # TODO:
+                    pass
+                case consts.REMOVE:  # remove user from subscribers
+                    # TODO:
+                    pass
+                case consts.ADMIN:  # toggle user -> admin or admin -> user
+                    # TODO:
+                    pass
+                case consts.LIST:  # list all subscribers with their data
+                    # TODO:
+                    pass
+                case consts.LANG:  # change preferred language of user
+                    # TODO:
+                    pass
+                case _:  # just send a message
+                    pass  # TODO:
         return ""  # TODO: whatever is returned is sent to user who sent command
 
 

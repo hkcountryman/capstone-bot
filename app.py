@@ -7,17 +7,10 @@ from typing import Tuple
 
 from flask import Flask, Request, request
 
-from chatbot import Chatbot, consts, mr_botty
+from chatbot import mr_botty
 
 app = Flask(__name__)
 """The server running the chatbot."""
-
-
-# TODO: functions to determine whether message is message to the group or a
-# bot command. May use switch case to parse first word of message once
-# trimmed of leading whitespace. I'm thinking
-#
-# See match case in Chatbot.process_cmd for my thoughts.
 
 
 def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
@@ -27,14 +20,13 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
         req -- Flask Request object
 
     Returns:
-        The first word of and the entirety of the message contents from a POST
-            request to the bot as well as the sender contact info and name.
+        The message contents from a POST request to the bot as well as the
+            sender contact info and name.
     """
-    msg = req.values.get("Body", default=consts.DRAFT_MSG, type=str).strip()
-    word_1 = msg.split()[0].lower()
+    msg = req.values.get("Body", default="Hello, world", type=str).strip()
     sender_contact = request.values.get("From", type=str)
     sender_name = request.values.get("ProfileName", type=str)
-    return (word_1, msg, sender_contact, sender_name)
+    return (msg, sender_contact, sender_name)
 
 
 # TODO: theoretically we could support multiple bots on one server, but
@@ -47,6 +39,6 @@ def bot() -> str:
     Returns:
         The bot's response.
     """
-    (cmd, msg, sender_contact, sender_name) = get_incoming_msg(request)
-    # TODO: return Chatbot.process_cmd(cmd, msg, sender_contact, sender_name)
+    (msg, sender_contact, sender_name) = get_incoming_msg(request)
+    # TODO: return mr_botty.process_msg(msg, sender_contact, sender_name)
     return mr_botty.reply('You said: "' + msg + '"')
