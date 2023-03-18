@@ -127,6 +127,8 @@ Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 50
 
 ### Connect Twilio sandbox to ngrok URL (for all options)
 
+Set your auth token in ngrok via `ngrok authtoken <YOUR_AUTHTOKEN>`. You only need to do this once.
+
 Copy the forwarding URL from ngrok's output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 
 ![image](https://user-images.githubusercontent.com/62478826/224860669-ad7b0ce5-1bd3-4803-a622-3da0ae7f0d28.png)

@@ -44,6 +44,13 @@ def bot() -> str:
     Returns:
         The bot's response.
     """
+    # Test: texting me and my mom a message :) it works!
+    # mr_botty.push("This is a push message from Halle. Hi!", [
+    #               "+15106485015", "+15104104268"])
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
-    # TODO: return mr_botty.process_msg(msg, sender_contact, sender_name)
-    return mr_botty.reply('You said: "' + msg + '"')
+    # # TODO: return mr_botty.process_msg(msg, sender_contact, sender_name)
+    # return mr_botty.reply('You said: "' + msg + '"')
+    translated_msg = mr_botty.translate_to(msg, "es")
+    response = mr_botty.reply(
+        f'You said: "{msg}". Translated to Spanish: "{translated_msg}"')
+    return response

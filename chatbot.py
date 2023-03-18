@@ -1,3 +1,5 @@
+# mypy: disable-error-code=import
+
 """Basic functionality for a WhatsApp chatbot.
 
 This module contains the class definition to create Chatbot objects, each of
@@ -10,6 +12,7 @@ import os
 from types import SimpleNamespace
 from typing import Dict, List
 
+import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -30,6 +33,8 @@ consts.CZECH = "czech"
 consts.ENGLISH = "english"
 consts.SPANISH = "spanish"
 consts.UKRANIAN = "ukranian"
+# Translate API
+consts.API_URL = "https://libretranslate.de/translate"
 
 
 class Chatbot:
@@ -117,9 +122,29 @@ class Chatbot:
             print(msg.sid)
 
     @staticmethod
-    def translate_to(msg: str, lang: str) -> str:
-        # TODO: translate to given language
-        return ""
+    def translate_to(text: str, target_lang: str) -> str:
+        """Translate text to the target language using the LibreTranslate API.
+
+        Arguments:
+            text -- The text to be translated
+            target_lang -- The target language code (e.g., 'en', 'es', 'fr', etc.)
+
+        Returns:
+            Translated text
+        """
+        payload = {"q": text, "source": "auto", "target": target_lang}
+        try:
+            response = requests.post(consts.API_URL, data=payload, timeout=2)
+            if response.status_code == 200:
+                translated_text = response.json()["translatedText"]
+                return translated_text
+            else:
+                print(f"Error: {response.status_code}")
+                return f"Translation failed: {text}"
+        except Exception as e:
+            # TODO: this could expose some internal workings, should fix
+            print(f"Error: {e}")
+            return f"Translation failed: {text}"
 
     @staticmethod
     def test_translate(msg: str, sender: Dict[str, str]):
@@ -191,12 +216,17 @@ class Chatbot:
                     # TODO:
                     pass
                 case _:  # just send a message
-                    pass  # TODO:
+                    # TODO: actually send, put the translate logic in send
+                    translated_msg = self.translate_to(msg, "es")
+                    return f"Translated message: {translated_msg}"
         return ""  # TODO: whatever is returned is sent to user who sent command
 
 
-mr_botty = Chatbot(
-    os.getenv("TWILIO_ACCOUNT_SID"),
-    os.getenv("TWILIO_AUTH_TOKEN"),
-    os.getenv("TWILIO_NUMBER"))  # TODO: add subscriber JSON file
+TWILIO_ACCOUNT_SID: str = os.getenv(
+    "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
+TWILIO_AUTH_TOKEN: str = os.getenv(
+    "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
+TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
+# TODO: add subscriber JSON file
+mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 """Global Chatbot object, of which there could theoretically be many."""
