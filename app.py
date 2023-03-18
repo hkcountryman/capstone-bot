@@ -13,7 +13,7 @@ app = Flask(__name__)
 """The server running the chatbot."""
 
 
-def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
+def get_incoming_msg(req: Request) -> Tuple[str, str, str]:
     """Get an incoming message sent to the bot and its sender.
 
     Arguments:
@@ -23,9 +23,14 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, str]:
         The message contents from a POST request to the bot as well as the
             sender contact info and name.
     """
-    msg = req.values.get("Body", default="Hello, world", type=str).strip()
-    sender_contact = request.values.get("From", type=str)
-    sender_name = request.values.get("ProfileName", type=str)
+    msg: str = req.values.get(
+        "Body",
+        default="Hello, world",
+        type=str).strip()  # type: ignore [union-attr]
+    sender_contact: str = request.values.get(
+        "From", type=str)  # type: ignore [assignment]
+    sender_name: str = request.values.get(
+        "ProfileName", type=str)  # type: ignore [assignment]
     return (msg, sender_contact, sender_name)
 
 

@@ -4,7 +4,7 @@
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ running on Linux
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
 - [ngrok](https://ngrok.com/)
@@ -91,27 +91,43 @@ You will need to [create a virtual environment](https://docs.python.org/3/tutori
 
 After activating the virtual environment, run `pre-commit install` to create a pre-commit git hook script. You should only need to do this once. Every time you commit, it may reformat your docstrings, meaning you may need to commit again. Try to keep these confined within an 80 character line; pylint will remind you but unfortunately I can't find a good way to handle the formatting.
 
-## Running
+## Running (for development)
 
-### Starting the Flask server
+### In VS Code (option 1)
 
 If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE.
+
+### With a script (option 2)
+
+You may want to create your own start script called `start.sh`. Depending on your terminal emulator, you may need to change the first command (shown below is an example using the Konsole terminal emulator, the line directly beneath the shebang). Fill in the `export` statements with the account SID and auth token described under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). It should look something like this:
+
+```bash
+#!/usr/bin/bash
+konsole --hold -e "ngrok http 5000" &  # run `ngrok http 5000` in a new terminal window without closing it
+export TWILIO_NUMBER="+14155238886"  # Twilio sandbox phone number
+export TWILIO_ACCOUNT_SID="<account SID>"  # fill in from Twilio sandbox settings
+export TWILIO_AUTH_TOKEN="<auth token>"  # fill in from Twilio sandbox settings
+source ./venv/bin/activate  # activate virtual environment
+flask run --debugger  # run Flask in debug mode for hot reloading while developing
+```
+
+### Manually (option 3)
 
 Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). In Bash, do
 
 ```bash
-export TWILIO_NUMBER="<phone number>"
+export TWILIO_NUMBER="+14155238886"
 export TWILIO_ACCOUNT_SID="<account SID>"
 export TWILIO_AUTH_TOKEN="<auth token>"
 ```
 
-In Windows PowerShell, the process would be similar, but the syntax would be, for example, `$env:TWILIO_NUMBER='<phone number>'`. In Windows Command Prompt, the syntax is simply `set TWILIO_NUMBER=<phone number>`.
-
 Then use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
 
-### Exposing the server publically with ngrok
+Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`.
 
-Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`. Copy the forwarding URL from the output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
+### Connect Twilio sandbox to ngrok URL (for all options)
+
+Copy the forwarding URL from ngrok's output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 
 ![image](https://user-images.githubusercontent.com/62478826/224860669-ad7b0ce5-1bd3-4803-a622-3da0ae7f0d28.png)
 
