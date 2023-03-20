@@ -1,17 +1,21 @@
 # capstone-bot
 
+## For development
+
 [This tutorial](https://www.twilio.com/blog/build-a-whatsapp-chatbot-with-python-flask-and-twilio) has a walkthrough similar to the instructions in this document as well as more information about WhatsApp bots.
 
-## Requirements
+### Requirements
 
 - Python 3.10+ running on Linux
+- Docker (if using your own self-hosted LibreTranslate)
+- Git (if using your own self-hosted LibreTranslate)
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
 - [ngrok](https://ngrok.com/)
 
-## Set up
+### Setup
 
-### Visual Studio Code
+#### Visual Studio Code
 
 If you're using VS Code, get the following extensions:
 
@@ -67,6 +71,8 @@ Also create `.vscode/launch.json` with the following:
             "args": [
                 "run",
                 "--debugger",
+                "--port",
+                "8080"
             ],
             "jinja": true,
             "justMyCode": true
@@ -85,47 +91,103 @@ Notice that some of the values of the environment variables are left up to you t
 
 Now you can run the server from inside the IDE.
 
-### Dependencies
+#### Dependencies
 
-You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html). Inside this repository, run `python3 -m venv venv` followed by, on Unix-based systems, `. ./venv/bin/activate` or, on Windows, `venv\Scripts\activate.bat`. Then install the dependencies with `pip install -r requirements.txt`. **Any time you add a dependency, it must be added to `requirements.txt` via `pip freeze > requirements.txt`.** You won't need to reinstall dependencies unless they change and you won't need to recreate the virtual environment, but it must be activated each time you want to develop or run the server.
+You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
 
-After activating the virtual environment, run `pre-commit install` to create a pre-commit git hook script. You should only need to do this once. Every time you commit, it may reformat your docstrings, meaning you may need to commit again. Try to keep these confined within an 80 character line; pylint will remind you but unfortunately I can't find a good way to handle the formatting.
+```bash
+python3 -m venv venv
+. ./venv/bin/activate
+pip install -r requirements.txt
+```
 
-## Running (for development)
+**Any time you add a dependency, it must be added to `requirements.txt` via**
 
-### In VS Code (option 1)
+```bash
+pip freeze > requirements.txt
+```
+
+You won't need to reinstall dependencies unless they change and you won't need to recreate the virtual environment, but it must be activated each time you want to develop or run the server.
+
+After activating the virtual environment, run
+
+```bash
+pre-commit install
+```
+
+to create a pre-commit git hook script. You should only need to do this once. Every time you commit, it may reformat your docstrings, meaning you may need to commit again. Try to keep these confined within an 80 character line; pylint will remind you but unfortunately I can't find a good way to handle the formatting.
+
+#### LibreTranslate
+
+Translations are provided by [LibreTranslate](https://libretranslate.com/). You can use their service if you get an API, but these instructions will assume you want to deploy your own server for your personal use.
+
+To deploy your self-hosted LibreTranslate, first clone the repository:
+
+```bash
+git clone https://github.com/LibreTranslate/LibreTranslate
+cd LibreTranslate
+```
+
+From there, build and run with
+
+```bash
+docker build -f docker/Dockerfile -t libretranslate .
+docker run -it -p 5000:5000 libretranslate --api-keys
+```
+
+If you are deploying on a GPU machine with CUDA 11.2 and [nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, you can speed up translations by instead building and running with
+
+```bash
+docker-compose -f docker-compose.cuda.yml up -d --build
+```
+
+You will be able to visit the web UI for the server at http://0.0.0.0:5000.
+
+### Running
+
+#### In VS Code (option 1)
 
 If you created a configuration file in VS Code, you can run with the run or debug buttons in the IDE.
 
-### With a script (option 2)
+#### With a script (option 2)
 
-You may want to create your own start script called `start.sh`. Depending on your terminal emulator, you may need to change the first command (shown below is an example using the Konsole terminal emulator, the line directly beneath the shebang). Fill in the `export` statements with the account SID and auth token described under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). It should look something like this:
+You may want to create your own start script called `start.sh`. Depending on your terminal emulator, you may need to change the first command (shown below is an example using the Konsole terminal emulator, the line directly beneath the shebang). Fill in the `export` statements with the account SID and auth token described under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). It should look something like this:
 
 ```bash
 #!/usr/bin/bash
-konsole --hold -e "ngrok http 5000" &  # run `ngrok http 5000` in a new terminal window without closing it
+konsole --hold -e "ngrok http 8080" &  # run `ngrok http 5000` in a new terminal window without closing it
 export TWILIO_NUMBER="+14155238886"  # Twilio sandbox phone number
 export TWILIO_ACCOUNT_SID="<account SID>"  # fill in from Twilio sandbox settings
 export TWILIO_AUTH_TOKEN="<auth token>"  # fill in from Twilio sandbox settings
+export LIBRETRANSLATE="http://0.0.0.0:5000"
 source ./venv/bin/activate  # activate virtual environment
-flask run --debugger  # run Flask in debug mode for hot reloading while developing
+flask run --debugger --port 8080  # run Flask in debug mode for hot reloading while developing
 ```
 
-### Manually (option 3)
+#### Manually (option 3)
 
-Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Set Up"](https://github.com/hkcountryman/capstone-bot#visual-studio-code). In Bash, do
+Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code):
 
 ```bash
 export TWILIO_NUMBER="+14155238886"
 export TWILIO_ACCOUNT_SID="<account SID>"
 export TWILIO_AUTH_TOKEN="<auth token>"
+export LIBRETRANSLATE="http://0.0.0.0:5000"
 ```
 
-Then use `flask run --debugger`. Don't forget that the virtual environment needs to be activated first.
+Then, with the virtual environment active, run the server:
 
-Next, use ngrok to expose a temporary, public URL for the server: `ngrok http 5000`.
+```bash
+flask run --debugger --port 8080
+```
 
-### Connect Twilio sandbox to ngrok URL (for all options)
+Next, use ngrok to expose a temporary, public URL for the server:
+
+```bash
+ngrok http 8080
+```
+
+#### Connect Twilio sandbox to ngrok URL (for all options)
 
 Set your auth token in ngrok via `ngrok authtoken <YOUR_AUTHTOKEN>`. You only need to do this once.
 
@@ -134,3 +196,55 @@ Copy the forwarding URL from ngrok's output (the address that is *not* http://lo
 ![image](https://user-images.githubusercontent.com/62478826/224860669-ad7b0ce5-1bd3-4803-a622-3da0ae7f0d28.png)
 
 Now you can try texting the number you texted earlier for the Sandbox.
+
+## To run the server (production)
+
+### Requirements
+
+- Python 3.10+ running on Linux
+- Docker (if using your own self-hosted LibreTranslate)
+- Git (if using your own self-hosted LibreTranslate)
+
+### Setup
+
+#### Dependencies
+
+You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
+
+```bash
+python3 -m venv venv
+. ./venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### LibreTranslate
+
+Translations are provided by [LibreTranslate](https://libretranslate.com/). You can use their service if you get an API, but these instructions will assume you want to deploy your own server for your personal use.
+
+To deploy your self-hosted LibreTranslate, first clone the repository:
+
+```bash
+git clone https://github.com/LibreTranslate/LibreTranslate
+cd LibreTranslate
+```
+
+From there, build and run with
+
+```bash
+docker build -f docker/Dockerfile -t libretranslate .
+docker run -it -p 5000:5000 libretranslate --api-keys
+```
+
+If you are deploying on a GPU machine with CUDA 11.2 and [nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, you can speed up translations by instead building and running with
+
+```bash
+docker-compose -f docker-compose.cuda.yml up -d --build
+```
+
+You will be able to visit the web UI for the server at http://0.0.0.0:5000.
+
+**Note: If you prefer, you can install and run using Python or Kubernetes. See [LibreTranslate's readme](https://github.com/LibreTranslate/LibreTranslate#readme).**
+
+### Running
+
+

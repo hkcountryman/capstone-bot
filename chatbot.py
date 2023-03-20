@@ -34,7 +34,7 @@ consts.ENGLISH = "english"
 consts.SPANISH = "spanish"
 consts.UKRANIAN = "ukranian"
 # Translate API
-consts.API_URL = "https://libretranslate.de/translate"
+consts.API_URL = f"{os.getenv('LIBRETRANSLATE')}/translate"
 
 
 class Chatbot:
