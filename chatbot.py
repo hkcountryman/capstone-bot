@@ -6,7 +6,6 @@ This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
 """
-
 import json
 import os
 from types import SimpleNamespace
@@ -15,6 +14,7 @@ from typing import Dict, List
 import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+
 
 consts = SimpleNamespace()
 # Constant strings for bot commands
@@ -169,12 +169,10 @@ class Chatbot:
         return Chatbot.translate_to(translated, sender["lang"])
 
     def list_subscribers(self) -> str:
-        """Return a string representation of all subscribers with their data."""
-        subscriber_data = []
-        for contact, data in self.subscribers.items():
-            subscriber_data.append(
-                f"{contact}: {data['name']} ({data['role']}, {data['lang']})")
-        return "\n".join(subscriber_data)
+        # Convert the dictionary of subscribers to a formatted JSON string
+        subscribers_list = json.dumps(self.subscribers, indent=2)
+        # Return a string that includes the formatted JSON string
+        return f"List of subscribers:\n{subscribers_list}"
 
     def process_msg(
             self,
@@ -218,11 +216,9 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    subscribers_str = "\n".join(
-                        f"{num}: {data['name']}, {data['lang']}, {data['role']}"
-                        for num, data in self.subscribers.items()
-                    )
-                    return f"All subscribers:\n{subscribers_str}"
+                    response = self.list_subscribers()
+                    print(f"List response: {response}")
+                    return response
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
@@ -231,7 +227,6 @@ class Chatbot:
                     translated_msg = self.translate_to(msg, "es")
                     return f"Translated message: {translated_msg}"
         return ""  # TODO: whatever is returned is sent to user who sent command
-
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
