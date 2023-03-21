@@ -168,6 +168,14 @@ class Chatbot:
             "".join(msg.split()[2:]), lang)
         return Chatbot.translate_to(translated, sender["lang"])
 
+    def list_subscribers(self) -> str:
+        """Return a string representation of all subscribers with their data."""
+        subscriber_data = []
+        for contact, data in self.subscribers.items():
+            subscriber_data.append(
+                f"{contact}: {data['name']} ({data['role']}, {data['lang']})")
+        return "\n".join(subscriber_data)
+
     def process_msg(
             self,
             msg: str,
@@ -210,8 +218,11 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    # TODO:
-                    pass
+                    subscribers_str = "\n".join(
+                        f"{num}: {data['name']}, {data['lang']}, {data['role']}"
+                        for num, data in self.subscribers.items()
+                    )
+                    return f"All subscribers:\n{subscribers_str}"
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
