@@ -132,4 +132,4 @@ dmypy.json
 .vscode/
 **/.DS_Store
 start.sh
-bot_subscribers/team56test.json
+bot_subscribers/*

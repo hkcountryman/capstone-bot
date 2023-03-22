@@ -156,26 +156,28 @@ class Chatbot:
             return f"Translation failed: HTTP {res.status_code} {res.reason}"
 
     @staticmethod
-    def test_translate(msg: str, sender: Dict[str, str]):
+    def test_translate(msg: str, sender: str):
         """Translate a string to a language, then to a user's native language.
 
         Arguments:
             msg -- message to translate
-            sender -- user requesting the translation
+            sender -- number of the user requesting the translation
 
         Returns:
             The translated message.
         """
         try:
             lang = msg.split()[1].lower()
-            if lang not in Chatbot.languages:
-                return Chatbot.test_err
+            # TODO: replace with dictionary solution for task 235
+            # if lang not in Chatbot.languages:
+            #     return Chatbot.test_err
         except IndexError:
             return Chatbot.test_err
         # Translate to requested language then back to native language
         translated = Chatbot.translate_to(
             "".join(msg.split()[2:]), lang)
-        return Chatbot.translate_to(translated, sender["lang"])
+        # TODO: replace with dictionary solution for task 235
+        return Chatbot.translate_to(translated, "en")  # sender["lang"])
 
     def process_msg(
             self,
@@ -201,14 +203,16 @@ class Chatbot:
         word_1 = msg.split()[0].lower()
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
-                return Chatbot.test_translate(msg, sender)
+                return self.reply(Chatbot.test_translate(msg, sender_contact))
             else:  # just send a message
                 # TODO:
                 pass
         else:
             match word_1:
                 case consts.TEST:  # test translate
-                    return Chatbot.test_translate(msg, sender)
+                    return self.reply(
+                        Chatbot.test_translate(
+                            msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
                     # TODO:
                     pass
@@ -227,7 +231,7 @@ class Chatbot:
                 case _:  # just send a message
                     # TODO: actually send, put the translate logic in send
                     translated_msg = self.translate_to(msg, "es")
-                    return f"Translated message: {translated_msg}"
+                    return self.reply(f"Translated message: {translated_msg}")
         return ""  # TODO: whatever is returned is sent to user who sent command
 
 
