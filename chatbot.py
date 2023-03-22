@@ -6,28 +6,16 @@ This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
 """
+
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, List, TypedDict
+from typing import Dict, TypedDict
 
-import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
-
-def _get_timeout() -> int:
-    """Populate the timeout constant from the environment.
-
-    Returns:
-        The integer value of the environment variable TRANSLATION_TIMEOUT, or 5
-            if the variable is nonnumeric or nonexistent.
-    """
-    try:
-        return int(os.getenv("TRANSLATION_TIMEOUT"))  # type: ignore [arg-type]
-    except (ValueError, TypeError):
-        return 5
-
+from language_data import LangData, translate_to
 
 consts = SimpleNamespace()
 # Constant strings for bot commands
@@ -41,10 +29,6 @@ consts.LANG = "/lang"  # set language for user
 consts.USER = "user"  # can only execute test translation command
 consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
-# Translation API
-consts.MIRRORS = [url + "translate" for url in os.getenv(  # list of mirrors
-    "LIBRETRANSLATE").split()]  # type: ignore [union-attr]
-consts.TIMEOUT = _get_timeout()  # seconds before requests time out
 
 
 class SubscribersInfo(TypedDict):
@@ -64,11 +48,8 @@ class Chatbot:
 
     Class variables:
         commands -- List of slash commands for the bot
-        languages -- List of language names, codes, and translation targets
-            supported by LibreTranslate
-        valid_codes -- List of all languages codes supported by LibreTranslate
-        valid_langs -- List of all human-readable languages supported by
-            LibreTranslate
+        languages -- Data shared by all chatbots on the server about the
+            languages supported by LibreTranslate
 
     Instance variables:
         client -- Client with which to access the Twilio API
@@ -77,8 +58,6 @@ class Chatbot:
         subscribers -- Dictionary containing the data loaded from the file
 
     Methods:
-        reply -- Reply to a message to the bot
-        push -- Push a message to one or more recipients given their numbers
         process_cmd -- Process a slash command and send a reply from the bot
     """
     commands = [
@@ -90,17 +69,8 @@ class Chatbot:
         consts.LANG]
     """All slash commands for the bot."""
 
-    languages: List[LanguageInfo] = []
-    """All language names, codes, and translation targets of LibreTranslate."""
-
-    valid_codes: List[str] = []
-    """List of language codes."""
-
-    valid_langs: List[str] = []
-    """List of human-readable language names and their codes."""
-
-    lang_err = ""
-    """The portion of an error message containing a list of valid languages."""
+    languages: LangData | None = None
+    """Data for all languages supported by LibreTranslate."""
 
     def __init__(
             self,
@@ -117,27 +87,8 @@ class Chatbot:
                 extension
             json_file -- Path to a JSON file containing subscriber data
         """
-        if len(Chatbot.languages) == 0:
-            # Attempt to populate an up-to-date language models list:
-            idx = 0  # index in URLs
-            res = None
-            while res is None and idx < len(consts.MIRRORS):
-                try:
-                    res = requests.get(
-                        f"{os.getenv('LIBRETRANSLATE')}languages",
-                        timeout=consts.TIMEOUT)
-                except TimeoutError:
-                    idx = idx + 1
-            if res is not None and res.status_code == 200:
-                Chatbot.languages = res.json()
-            else:
-                # If that failed, we can load the data from languages.json
-                with open("languages.json", encoding="utf-8") as file:
-                    Chatbot.languages = json.load(file)
-            Chatbot.valid_codes = [x["code"] for x in Chatbot.languages]
-            Chatbot.valid_langs = [x["name"] for x in Chatbot.languages]
-            Chatbot.lang_err = "".join(["Languages:"] + list(
-                map(lambda l: ("\n" + l), Chatbot.valid_langs)))
+        if Chatbot.languages is None:
+            Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
@@ -159,16 +110,21 @@ class Chatbot:
         return str(resp)
 
     def _push(self, text: str, sender: str):
-        """Push a message to one or more recipients given their numbers.
+        """Push a translated message to one or more recipients.
 
         Arguments:
             text -- Contents of the message
             sender -- Sender's WhatsApp contact info
         """
+        translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
             if s != sender:
-                translated = _translate_to(
-                    text, self.subscribers[s]["lang"])
+                if self.subscribers[s]["lang"] in translations:
+                    translated = translations[self.subscribers[s]["lang"]]
+                else:
+                    translated = translate_to(
+                        text, self.subscribers[s]["lang"])
+                    translations[self.subscribers[s]["lang"]] = translated
                 msg = self.client.messages.create(
                     from_=f"whatsapp:{self.number}",
                     to=s,
@@ -186,21 +142,18 @@ class Chatbot:
             The translated message.
         """
         sender_lang = self.subscribers[sender]["lang"]
-        error = _translate_to(
-            "Choose a valid language. Example:",
-            sender_lang) + "\n/test es How are you today?\n\n" + _translate_to(
-            Chatbot.lang_err,
-            sender_lang)
         try:
-            lang = msg.split()[1].lower()
+            l = msg.split()[1].lower()
             # TODO: replace with dictionary solution for task 235
-            if lang not in Chatbot.languages:
-                return error
+            if l not in Chatbot.languages.codes:  # type: ignore [union-attr]
+                return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                    sender_lang)
         except IndexError:
-            return error
+            return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                sender_lang)
         # Translate to requested language then back to native language
-        translated = _translate_to("".join(msg.split()[2:]), lang)
-        return _translate_to(translated, self.subscribers[sender]["lang"])
+        translated = translate_to("".join(msg.split()[2:]), l)
+        return translate_to(translated, sender_lang)
 
     def process_msg(
             self,
@@ -228,8 +181,8 @@ class Chatbot:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
             else:  # just send a message
-                # TODO:
-                pass
+                text = sender_name + " says:\n" + msg
+                self._push(text, sender_contact)
         else:
             match word_1:
                 case consts.TEST:  # test translate
@@ -255,35 +208,6 @@ class Chatbot:
                     text = sender_name + " says:\n" + msg
                     self._push(text, sender_contact)
         return ""
-
-
-def _translate_to(text: str, target_lang: str) -> str:
-    """Translate text to the target language using the LibreTranslate API.
-
-    Arguments:
-        text -- The text to be translated
-        target_lang -- The target language code ("en", "es", "fr", etc.)
-
-    Returns:
-        Translated text
-    """
-    payload = {"q": text, "source": "auto", "target": target_lang}
-    idx = 0  # index in URLs
-    res = None
-    while res is None and idx < len(consts.MIRRORS):
-        try:
-            res = requests.post(
-                consts.MIRRORS[idx],
-                data=payload,
-                timeout=consts.TIMEOUT)
-        except TimeoutError:
-            idx = idx + 1
-    if res is None:  # ran out of mirrors to try
-        return "Translation timed out"
-    elif res.status_code == 200:
-        return res.json()["translatedText"]
-    else:
-        return f"Translation failed: HTTP {res.status_code} {res.reason}"
 
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
