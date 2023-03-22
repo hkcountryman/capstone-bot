@@ -8,6 +8,7 @@ instance of such a chatbot for import by the Flask app.
 """
 
 import json
+from cryptography.fernet import Fernet
 import os
 from types import SimpleNamespace
 from typing import Dict, List
@@ -80,7 +81,8 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/template.json"):
+            json_file: str = "bot_subscribers/template.json",
+            key_file: str = "bot_subscribers/key.key"):
         """Create the ChatBot object.
 
         Arguments:
@@ -89,12 +91,24 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            key_file -- Path to a file containing encryption key
         """
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
         with open(json_file, encoding="utf-8") as file:
             self.subscribers = json.load(file)
+        # with open(json_file, 'rb') as file:
+            # encrypted_data = file.read()
+        if not os.path.isfile(key_file):
+            self.key = Fernet.generate_key()
+            with open('bot_subscribers/key.key', 'xb') as file:
+                file.write(self.key)
+        else:
+            with open('bot_subscribers/key.key', 'rb') as file:
+                self.key = file.read()
+        # f = Fernet(self.key)
+        # self.list_subscribers = f.decrypt(encrypted_data).decode('utf-8')
 
     def reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -179,6 +193,18 @@ class Chatbot:
             "".join(msg.split()[2:]), lang)
         return Chatbot.translate_to(translated, sender["lang"])
 
+    def list_subscribers(self) -> str:
+        # Convert the dictionary of subscribers to a formatted JSON string
+        subscribers_list = json.dumps(self.subscribers, indent=2)
+        # Create byte version of JSON string
+        subscribers_list_byte = subscribers_list.encode('utf-8')
+        f = Fernet(self.key)
+        encrypted_data = f.encrypt(subscribers_list_byte)
+        with open("bot_subscribers/template.json", 'wb') as file:
+            file.write(encrypted_data)
+        # Return a string that includes the formatted JSON string
+        return f"List of subscribers:\n{subscribers_list}"
+
     def process_msg(
             self,
             msg: str,
@@ -221,8 +247,9 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    # TODO:
-                    pass
+                    response = self.list_subscribers()
+                    print(f"List response: {response}")
+                    return response
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
@@ -239,5 +266,8 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 # TODO: add subscriber JSON file
-mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+mr_botty = Chatbot(
+    "AC40cc30898134e9e8d9a3286588e93121",
+    "e72e0296e5b7a9d3ab8d7301c9459f06",
+    "+14155238886")
 """Global Chatbot object, of which there could theoretically be many."""

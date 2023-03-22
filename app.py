@@ -2,6 +2,7 @@
 
 This module handles the route to make requests to the bot.
 """
+from twilio.twiml.messaging_response import MessagingResponse
 
 from typing import Tuple
 
@@ -50,7 +51,13 @@ def bot() -> str:
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
     # # TODO: return mr_botty.process_msg(msg, sender_contact, sender_name)
     # return mr_botty.reply('You said: "' + msg + '"')
+    if msg.lower() == "/list":
+        resp = MessagingResponse()
+        msg = resp.message()
+        msg.body(mr_botty.list_subscribers())
+        return str(resp)
+
     translated_msg = mr_botty.translate_to(msg, "es")
     response = mr_botty.reply(
         f'You said: "{msg}". Translated to Spanish: "{translated_msg}"')
-    return response
+    return str(response)
