@@ -152,8 +152,12 @@ class Chatbot:
             return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
                 sender_lang)
         # Translate to requested language then back to native language
-        translated = translate_to("".join(msg.split()[2:]), l)
-        return translate_to(translated, sender_lang)
+        text = "".join(msg.split()[2:])
+        if text != "":
+            translated = translate_to(text, l)
+            return translate_to(translated, sender_lang)
+        return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+            sender_lang)
 
     def process_msg(
             self,
