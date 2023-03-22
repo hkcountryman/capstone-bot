@@ -15,7 +15,6 @@ import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
-
 consts = SimpleNamespace()
 # Constant strings for bot commands
 consts.TEST = "/test"  # test translate
@@ -36,7 +35,6 @@ consts.UKRANIAN = "ukranian"
 # Translate API
 consts.API_URL = "https://libretranslate.de/translate"
 
-
 class Chatbot:
     """The chatbot logic.
 
@@ -54,7 +52,6 @@ class Chatbot:
         push -- Push a message to one or more recipients given their numbers
         process_cmd -- Process a slash command and send a reply from the bot
     """
-
     commands = [
         consts.TEST,
         consts.ADD,
