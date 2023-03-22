@@ -1,17 +1,17 @@
 {
     "whatsapp:+12005555550": {
         "name": "A User",
-        "lang": "english",
+        "lang": "en",
         "role": "user"
     },
     "whatsapp:+12005555551": {
         "name": "B User",
-        "lang": "english",
+        "lang": "it",
         "role": "admin"
     },
     "whatsapp:+12005555552": {
         "name": "C User",
-        "lang": "english",
+        "lang": "es",
         "role": "super"
     }
 }

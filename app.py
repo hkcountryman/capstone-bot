@@ -45,8 +45,3 @@ def bot() -> str:
     """
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
     return mr_botty.process_msg(msg, sender_contact, sender_name)
-
-    # translated_msg = mr_botty.translate_to(msg, "es")
-    # response = mr_botty.reply(
-    #     f'You said: "{msg}". Translated to Spanish: "{translated_msg}"')
-    # return str(response)
