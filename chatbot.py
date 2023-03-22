@@ -152,7 +152,7 @@ class Chatbot:
             return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
                 sender_lang)
         # Translate to requested language then back to native language
-        text = "".join(msg.split()[2:])
+        text = " ".join(msg.split()[2:])
         if text != "":
             translated = translate_to(text, l)
             return translate_to(translated, sender_lang)
@@ -184,15 +184,17 @@ class Chatbot:
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
+            elif word_1[0:1] == "/" and len(word_1) > 1:
+                return ""  # ignore invalid/unauthorized command
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact)
         else:
             match word_1:
                 case consts.TEST:  # test translate
-                    return self._reply(
-                        self._test_translate(
-                            msg, sender_contact))
+                    test_translation = self._test_translate(
+                        msg, sender_contact)
+                    return self._reply(test_translation)
                 case consts.ADD:  # add user to subscribers
                     # TODO:
                     pass
@@ -209,6 +211,8 @@ class Chatbot:
                     # TODO:
                     pass
                 case _:  # just send a message
+                    if word_1[0:1] == "/" and len(word_1) > 1:
+                        return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
                     self._push(text, sender_contact)
         return ""
