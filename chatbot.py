@@ -40,6 +40,7 @@ if os.getenv("LIBRETRANSLATE") is not None:
 else:
     consts.MIRRORS = []
 
+
 class Chatbot:
     """The chatbot logic.
 
@@ -91,7 +92,7 @@ class Chatbot:
         self.number = number
         self.json_file = json_file
         with open(json_file, encoding="utf-8") as file:
-            self.subscribers = json.load(file)
+            self.subscribers: Dict[str, Dict[str, str]] = json.load(file)
 
     def reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -176,12 +177,6 @@ class Chatbot:
             "".join(msg.split()[2:]), lang)
         return Chatbot.translate_to(translated, sender["lang"])
 
-    def list_subscribers(self) -> str:
-        # Convert the dictionary of subscribers to a formatted JSON string
-        subscribers_list = json.dumps(self.subscribers, indent=2)
-        # Return a string that includes the formatted JSON string
-        return f"List of subscribers:\n{subscribers_list}"
-
     def process_msg(
             self,
             msg: str,
@@ -224,9 +219,8 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    response = self.list_subscribers()
-                    print(f"List response: {response}")
-                    return response
+                    subscribers = json.dumps(self.subscribers, indent=2)
+                    return self.reply(f"List of subscribers:\n{subscribers}")
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
@@ -236,11 +230,16 @@ class Chatbot:
                     return f"Translated message: {translated_msg}"
         return ""  # TODO: whatever is returned is sent to user who sent command
 
+
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-# TODO: add subscriber JSON file
-mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+mr_botty = Chatbot(
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_NUMBER,
+    SUBSCRIBER_FILE)
 """Global Chatbot object, of which there could theoretically be many."""
