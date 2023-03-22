@@ -42,11 +42,11 @@ error_messages.lang_list = ""  # list of all valid languages
 
 class LangEntry(TypedDict):
     """A TypedDict to describe associated data for some language code."""
-    name: str
-    targets: List[str]
-    lang_list: str | None
-    lang_err: str | None
-    test_err: str | None
+    name: str  # human-readable name
+    targets: List[str]  # codes for targets this language can be translated to
+    lang_list: str | None  # list of valid languages in this language
+    lang_err: str | None  # generic error header in this language
+    test_err: str | None  # /test error message in this language
 
 
 class LangData:
