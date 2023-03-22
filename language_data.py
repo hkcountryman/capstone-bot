@@ -99,6 +99,20 @@ class LangData:
             ["Languages:"] + list(map(lambda l: (f"\n{l}"), self.names)))
 
     def _get_lang_list(self, code: str) -> str:
+        """Get a translated list of valid languages with their codes.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+
+        Raises:
+            TimeoutError -- If all mirrors time out before providing a
+                translation
+            HTTPError -- If a non-OK response is received from the
+                LibreTranslate API
+        """
         if self.entries[code]["lang_list"] is None:
             # First get translated list of valid languages without the codes:
             no_codes = translate_to(error_messages.lang_list, code).split("\n")
@@ -110,6 +124,20 @@ class LangData:
         return self.entries[code]["lang_list"]  # type: ignore [return-value]
 
     def _get_lang_err(self, code: str) -> str:
+        """Get a translated generic error header.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+
+        Raises:
+            TimeoutError -- If all mirrors time out before providing a
+                translation
+            HTTPError -- If a non-OK response is received from the
+                LibreTranslate API
+        """
         if self.entries[code]["lang_err"] is None:
             self.entries[code]["lang_err"] = translate_to(
                 error_messages.lang_err, code)
@@ -117,8 +145,14 @@ class LangData:
 
     def get_test_err(self, code: str) -> str:
         if self.entries[code]["test_err"] is None:
-            self.entries[code]["test_err"] = self._get_lang_err(
-                code) + error_messages.test_err + self._get_lang_list(code)
+            try:
+                self.entries[code]["test_err"] = self._get_lang_err(
+                    code) + error_messages.test_err + self._get_lang_list(code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.lang_err + error_messages.test_err + \
+                    error_messages.lang_list
         return self.entries[code]["test_err"]  # type: ignore [return-value]
 
 
@@ -126,11 +160,16 @@ def translate_to(text: str, target_lang: str) -> str:
     """Translate text to the target language using the LibreTranslate API.
 
     Arguments:
-        text -- The text to be translated
-        target_lang -- The target language code ("en", "es", "fr", etc.)
+        text -- Text to be translated
+        target_lang -- Target language code ("en", "es", "fr", etc.)
 
     Returns:
-        Translated text
+        Translated text.
+
+    Raises:
+        TimeoutError -- If all mirrors time out before providing a translation
+        HTTPError -- If a non-OK response is received from the LibreTranslate
+            API
     """
     payload = {"q": text, "source": "auto", "target": target_lang}
     idx = 0  # index in URLs
@@ -144,8 +183,9 @@ def translate_to(text: str, target_lang: str) -> str:
         except TimeoutError:
             idx = idx + 1
     if res is None:  # ran out of mirrors to try
-        return "Translation timed out"
+        raise TimeoutError("Translation timed out for all mirrors")
     elif res.status_code == 200:
         return res.json()["translatedText"]
     else:
-        return f"Translation failed: HTTP {res.status_code} {res.reason}"
+        raise requests.HTTPError(
+            f"Translation failed: HTTP {res.status_code} {res.reason}")

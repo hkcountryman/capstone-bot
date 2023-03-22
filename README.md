@@ -48,7 +48,7 @@ Create a `.vscode/` directory and add a `settings.json` inside it. Set the relev
     "python.formatting.provider": "none",
     "python.languageServer": "Pylance",
     "python.linting.mypyEnabled": true,
-    "python.linting.mypyArgs": ["--show-error-codes"],
+    "python.linting.mypyArgs": ["--show-error-codes", "--check-untyped-defs"],
     "python.linting.pylintEnabled": true,
     "python.linting.pylintArgs": ["--rcfile=${workspaceFolder}/.pylintrc"],
     "autoDocstring.docstringFormat": "pep257",

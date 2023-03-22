@@ -12,6 +12,7 @@ import os
 from types import SimpleNamespace
 from typing import Dict, TypedDict
 
+import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -109,12 +110,17 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def _push(self, text: str, sender: str):
+    def _push(self, text: str, sender: str) -> str:
         """Push a translated message to one or more recipients.
 
         Arguments:
             text -- Contents of the message
             sender -- Sender's WhatsApp contact info
+
+        Returns:
+            An empty string to the sender, or else an error message if the
+                request to the LibreTranslate API times out or has some other
+                error.
         """
         translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
@@ -122,14 +128,18 @@ class Chatbot:
                 if self.subscribers[s]["lang"] in translations:
                     translated = translations[self.subscribers[s]["lang"]]
                 else:
-                    translated = translate_to(
-                        text, self.subscribers[s]["lang"])
+                    try:
+                        translated = translate_to(
+                            text, self.subscribers[s]["lang"])
+                    except (TimeoutError, requests.HTTPError) as e:
+                        return str(e)
                     translations[self.subscribers[s]["lang"]] = translated
                 msg = self.client.messages.create(
                     from_=f"whatsapp:{self.number}",
                     to=s,
                     body=translated)
                 print(msg.sid)
+        return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
         """Translate a string to a language, then to a user's native language.
@@ -139,7 +149,8 @@ class Chatbot:
             sender -- number of the user requesting the translation
 
         Returns:
-            The translated message.
+            The translated message, or else an error message if the request to
+                the LibreTranslate API times out or has some other error.
         """
         sender_lang = self.subscribers[sender]["lang"]
         try:
@@ -154,8 +165,11 @@ class Chatbot:
         # Translate to requested language then back to native language
         text = " ".join(msg.split()[2:])
         if text != "":
-            translated = translate_to(text, l)
-            return translate_to(translated, sender_lang)
+            try:
+                translated = translate_to(text, l)
+                return translate_to(translated, sender_lang)
+            except (TimeoutError, requests.HTTPError) as e:
+                return str(e)
         return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
             sender_lang)
 
@@ -214,7 +228,7 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    self._push(text, sender_contact)
+                    return self._push(text, sender_contact)
         return ""
 
 
