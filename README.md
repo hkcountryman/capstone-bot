@@ -7,13 +7,19 @@
 ### Requirements
 
 - Python 3.10+ running on Linux
-- Docker (if using your own self-hosted LibreTranslate)
-- Git (if using your own self-hosted LibreTranslate)
+- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate)
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
 - [ngrok](https://ngrok.com/)
 
 ### Setup
+
+Begin by cloning the repository and entering its directory:
+
+```bash
+git clone https://github.com/hkcountryman/capstone-bot
+cd capstone-bot
+```
 
 #### Visual Studio Code
 
@@ -66,7 +72,9 @@ Also create `.vscode/launch.json` with the following:
                 "FLASK_DEBUG": "1",
                 "TWILIO_NUMBER": "+14155238886",
                 "TWILIO_ACCOUNT_SID": "<account SID>",
-                "TWILIO_AUTH_TOKEN": "<auth token>"
+                "TWILIO_AUTH_TOKEN": "<auth token>",
+                "LIBRETRANSLATE": "<space-separated list of LibreTranslate mirrors>",
+                "TRANSLATION_TIMEOUT": "<translation request timeout seconds>",
             },
             "args": [
                 "run",
@@ -83,9 +91,11 @@ Also create `.vscode/launch.json` with the following:
 
 Notice that some of the values of the environment variables are left up to you to populate:
 
-- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code
-- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below)
-- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page
+- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code.
+- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below).
+- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page.
+- `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
+- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10 for general use, but you may wish to increase this to 30+ if you want to give yourself time to use a debugger without requests timing out as you step through code.
 
 ![image](https://user-images.githubusercontent.com/62478826/225091129-7480cb50-223e-4e53-b801-dafcd1e3442d.png)
 
@@ -119,29 +129,7 @@ to create a pre-commit git hook script. You should only need to do this once. Ev
 
 #### LibreTranslate
 
-Translations are provided by [LibreTranslate](https://libretranslate.com/). You can use their service if you get an API, but these instructions will assume you want to deploy your own server for your personal use.
-
-To deploy your self-hosted LibreTranslate, first clone the repository:
-
-```bash
-git clone https://github.com/LibreTranslate/LibreTranslate
-cd LibreTranslate
-```
-
-From there, build and run with
-
-```bash
-docker build -f docker/Dockerfile -t libretranslate .
-docker run -it -p 5000:5000 libretranslate --api-keys
-```
-
-If you are deploying on a GPU machine with CUDA 11.2 and [nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, you can speed up translations by instead building and running with
-
-```bash
-docker-compose -f docker-compose.cuda.yml up -d --build
-```
-
-You will be able to visit the web UI for the server at http://0.0.0.0:5000.
+If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
 
 ### Running
 
@@ -159,20 +147,22 @@ konsole --hold -e "ngrok http 8080" &  # run `ngrok http 5000` in a new terminal
 export TWILIO_NUMBER="+14155238886"  # Twilio sandbox phone number
 export TWILIO_ACCOUNT_SID="<account SID>"  # fill in from Twilio sandbox settings
 export TWILIO_AUTH_TOKEN="<auth token>"  # fill in from Twilio sandbox settings
-export LIBRETRANSLATE="http://0.0.0.0:5000"
+export LIBRETRANSLATE="<space-separated list of LibreTranslate mirrors>"  # LibreTranslate API URLs
+export TRANSLATION_TIMEOUT=<translation request timeout seconds>  # optional, (integer) seconds for a translation request to time out
 source ./venv/bin/activate  # activate virtual environment
 flask run --debugger --port 8080  # run Flask in debug mode for hot reloading while developing
 ```
 
 #### Manually (option 3)
 
-Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN`, the values of which are described above under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code):
+Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `LIBRETRANSLATE`, and optionally `TRANSLATION_TIMEOUT`, the values of which are described above under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code):
 
 ```bash
 export TWILIO_NUMBER="+14155238886"
 export TWILIO_ACCOUNT_SID="<account SID>"
 export TWILIO_AUTH_TOKEN="<auth token>"
-export LIBRETRANSLATE="http://0.0.0.0:5000"
+export LIBRETRANSLATE="<space-separated list of LibreTranslate mirrors>"
+export TRANSLATION_TIMEOUT=<translation request timeout seconds>
 ```
 
 Then, with the virtual environment active, run the server:
@@ -189,7 +179,7 @@ ngrok http 8080
 
 #### Connect Twilio sandbox to ngrok URL (for all options)
 
-Set your auth token in ngrok via `ngrok authtoken <YOUR_AUTHTOKEN>`. You only need to do this once.
+Set your auth token in ngrok via `ngrok authtoken <auth token>`. You only need to do this once.
 
 Copy the forwarding URL from ngrok's output (the address that is *not* http://localhost:5000) and paste this address followed by "/bot" into your Sandbox Configuration settings in your Twilio console in the "When a message comes in" field. The corresponding method should be set to "POST". It should look like this:
 
@@ -202,10 +192,18 @@ Now you can try texting the number you texted earlier for the Sandbox.
 ### Requirements
 
 - Python 3.10+ running on Linux
-- Docker (if using your own self-hosted LibreTranslate)
-- Git (if using your own self-hosted LibreTranslate)
+- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate)
+- A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
+- Git
 
 ### Setup
+
+Begin by cloning the repository and entering its directory:
+
+```bash
+git clone https://github.com/hkcountryman/capstone-bot
+cd capstone-bot
+```
 
 #### Dependencies
 
@@ -219,32 +217,21 @@ pip install -r requirements.txt
 
 #### LibreTranslate
 
-Translations are provided by [LibreTranslate](https://libretranslate.com/). You can use their service if you get an API, but these instructions will assume you want to deploy your own server for your personal use.
+If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you have access to an Nvidia GPU and want to [speed up translations with CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
 
-To deploy your self-hosted LibreTranslate, first clone the repository:
+#### Environment variables
 
-```bash
-git clone https://github.com/LibreTranslate/LibreTranslate
-cd LibreTranslate
-```
+The system must have the following environment variables set:
 
-From there, build and run with
-
-```bash
-docker build -f docker/Dockerfile -t libretranslate .
-docker run -it -p 5000:5000 libretranslate --api-keys
-```
-
-If you are deploying on a GPU machine with CUDA 11.2 and [nvidia-docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, you can speed up translations by instead building and running with
-
-```bash
-docker-compose -f docker-compose.cuda.yml up -d --build
-```
-
-You will be able to visit the web UI for the server at http://0.0.0.0:5000.
-
-**Note: If you prefer, you can install and run using Python or Kubernetes. See [LibreTranslate's readme](https://github.com/LibreTranslate/LibreTranslate#readme).**
+- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code.
+- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below).
+- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page.
+- `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
+- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
 
 ### Running
 
-
+TODO:
+- https://gunicorn.org/ (example: `gunicorn -b :4000 bot:app`)
+- https://uwsgi-docs.readthedocs.io/en/latest/
+- explain how to deploy on a cloud service provider or how to expose a port on a local server

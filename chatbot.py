@@ -34,7 +34,12 @@ consts.ENGLISH = "english"
 consts.SPANISH = "spanish"
 consts.UKRANIAN = "ukranian"
 # Translate API
-consts.API_URL = f"{os.getenv('LIBRETRANSLATE')}/translate"
+if os.getenv("LIBRETRANSLATE") is not None:
+    consts.MIRRORS = [
+        url + "translate" for url in
+        os.getenv("LIBRETRANSLATE").split()]  # type: ignore [union-attr]
+else:
+    consts.MIRRORS = []
 
 
 class Chatbot:
@@ -127,24 +132,30 @@ class Chatbot:
 
         Arguments:
             text -- The text to be translated
-            target_lang -- The target language code (e.g., 'en', 'es', 'fr', etc.)
+            target_lang -- The target language code ('en', 'es', 'fr', etc.)
 
         Returns:
             Translated text
         """
         payload = {"q": text, "source": "auto", "target": target_lang}
-        try:
-            response = requests.post(consts.API_URL, data=payload, timeout=2)
-            if response.status_code == 200:
-                translated_text = response.json()["translatedText"]
-                return translated_text
-            else:
-                print(f"Error: {response.status_code}")
-                return f"Translation failed: {text}"
-        except Exception as e:
-            # TODO: this could expose some internal workings, should fix
-            print(f"Error: {e}")
-            return f"Translation failed: {text}"
+        to = os.getenv("TRANSLATION_TIMEOUT")
+        timeout = int(to) if to is not None else 5
+        idx = 0  # index in urls
+        res = None
+        while res is None and idx < len(consts.MIRRORS):
+            try:
+                res = requests.post(
+                    consts.MIRRORS[idx],
+                    data=payload,
+                    timeout=timeout)
+            except TimeoutError:
+                idx = idx + 1
+        if res is None:  # ran out of mirrors to try
+            return "Translation timed out"
+        elif res.status_code == 200:
+            return res.json()["translatedText"]
+        else:
+            return f"Translation failed: HTTP {res.status_code} {res.reason}"
 
     @staticmethod
     def test_translate(msg: str, sender: Dict[str, str]):
