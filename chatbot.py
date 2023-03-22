@@ -6,7 +6,6 @@ This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
 """
-
 import json
 import os
 from types import SimpleNamespace
@@ -41,7 +40,6 @@ if os.getenv("LIBRETRANSLATE") is not None:
 else:
     consts.MIRRORS = []
 
-
 class Chatbot:
     """The chatbot logic.
 
@@ -59,7 +57,6 @@ class Chatbot:
         push -- Push a message to one or more recipients given their numbers
         process_cmd -- Process a slash command and send a reply from the bot
     """
-
     commands = [
         consts.TEST,
         consts.ADD,
@@ -179,6 +176,12 @@ class Chatbot:
             "".join(msg.split()[2:]), lang)
         return Chatbot.translate_to(translated, sender["lang"])
 
+    def list_subscribers(self) -> str:
+        # Convert the dictionary of subscribers to a formatted JSON string
+        subscribers_list = json.dumps(self.subscribers, indent=2)
+        # Return a string that includes the formatted JSON string
+        return f"List of subscribers:\n{subscribers_list}"
+
     def process_msg(
             self,
             msg: str,
@@ -221,8 +224,9 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    # TODO:
-                    pass
+                    response = self.list_subscribers()
+                    print(f"List response: {response}")
+                    return response
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
@@ -231,7 +235,6 @@ class Chatbot:
                     translated_msg = self.translate_to(msg, "es")
                     return f"Translated message: {translated_msg}"
         return ""  # TODO: whatever is returned is sent to user who sent command
-
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
