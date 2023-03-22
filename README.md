@@ -95,7 +95,7 @@ Notice that some of the values of the environment variables are left up to you t
 - `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below).
 - `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page.
 - `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
-- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 5 for general use, but you may wish to increase this to 30+ if you want to give yourself time to use a debugger without requests timing out as you step through code.
+- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10 for general use, but you may wish to increase this to 30+ if you want to give yourself time to use a debugger without requests timing out as you step through code.
 
 ![image](https://user-images.githubusercontent.com/62478826/225091129-7480cb50-223e-4e53-b801-dafcd1e3442d.png)
 
@@ -227,7 +227,7 @@ The system must have the following environment variables set:
 - `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below).
 - `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page.
 - `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
-- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 5.
+- `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
 
 ### Running
 
