@@ -24,7 +24,7 @@ def _get_timeout() -> int:
     try:
         return int(os.getenv("TRANSLATION_TIMEOUT"))  # type: ignore [arg-type]
     except (ValueError, TypeError):
-        return 5
+        return 10
 
 
 consts = SimpleNamespace()
