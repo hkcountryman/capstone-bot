@@ -1,4 +1,4 @@
-# capstone-bot
+# WhatsApp Group Chat Translation Bot
 
 ## For development
 
@@ -7,7 +7,7 @@
 ### Requirements
 
 - Python 3.10+ running on Linux
-- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate)
+- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate): public mirrors and/or your own deployed server
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
 - [ngrok](https://ngrok.com/)
@@ -192,9 +192,10 @@ Now you can try texting the number you texted earlier for the Sandbox.
 ### Requirements
 
 - Python 3.10+ running on Linux
-- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate)
-- A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
+- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate): public mirrors and/or your own deployed server
+- An [upgraded Twilio account](https://support.twilio.com/hc/en-us/articles/223183208-Upgrading-to-a-paid-Twilio-Account) with a [WhatsApp Sender](https://www.twilio.com/docs/whatsapp/self-sign-up)
 - Git
+- [nginx](https://nginx.org/en/docs/install.html)
 
 ### Setup
 
@@ -217,21 +218,28 @@ pip install -r requirements.txt
 
 #### LibreTranslate
 
-If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you have access to an Nvidia GPU and want to [speed up translations with CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
+If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
 
 #### Environment variables
 
 The system must have the following environment variables set:
 
-- `TWILIO_NUMBER`: the Twilio sandbox phone number with no punctuation except for the "+" before the country code.
-- `TWILIO_ACCOUNT_SID`: your account SID from your Twilio Console's "Get Set Up" page (see below).
-- `TWILIO_AUTH_TOKEN`: your account auth token, also from your "Get Set Up" page.
+- `TWILIO_NUMBER`: the Twilio phone number for your WhatsApp Sender with no punctuation except for the "+" before the country code.
+- `TWILIO_ACCOUNT_SID`: [your Twilio account SID](https://www.twilio.com/docs/whatsapp/key-concepts#twilio-account-account-sid-subaccount-sid-and-project-sid)
+- `TWILIO_AUTH_TOKEN`: [your Twilio account auth token]()
 - `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
 - `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
 
-### Running
+### Deploying
 
-TODO:
-- https://gunicorn.org/ (example: `gunicorn -b :4000 bot:app`)
-- https://uwsgi-docs.readthedocs.io/en/latest/
-- explain how to deploy on a cloud service provider or how to expose a port on a local server
+You can deploy in any Linux environment, on either a local machine, a VPS, or an online service like Heroku or AWS. You will run the Flask app on [Gunicorn](https://gunicorn.org/), a Python WSGI HTTP server, proxied behind [nginx](https://nginx.org/), an HTTP proxy server.
+
+#### Nginx
+
+As a proxy server, nginx will receive requests from the outside world to pass to your WSGI server as well as listen for responses from the WSGI server to forward back to the outside world. Start nginx with the `nginx` command.
+
+The example `nginx.conf` in this repository is suitable and can be placed in either `/usr/local/nginx/conf/`, `/etc/nginx/`, or `/usr/local/etc/nginx/`. (Note that you have to run `nginx -s reload` if you change the configuration file.)
+
+#### Gunicorn
+
+It will be installed already in the virtual environment.
