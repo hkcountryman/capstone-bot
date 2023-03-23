@@ -6,14 +6,17 @@ This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
 """
+
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, List
+from typing import Dict, TypedDict
 
 import requests
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+
+from language_data import LangData, translate_to
 
 consts = SimpleNamespace()
 # Constant strings for bot commands
@@ -27,24 +30,27 @@ consts.LANG = "/lang"  # set language for user
 consts.USER = "user"  # can only execute test translation command
 consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
-# Languages
-consts.CZECH = "czech"
-consts.ENGLISH = "english"
-consts.SPANISH = "spanish"
-consts.UKRANIAN = "ukranian"
-# Translate API
-if os.getenv("LIBRETRANSLATE") is not None:
-    consts.MIRRORS = [
-        url + "translate" for url in
-        os.getenv("LIBRETRANSLATE").split()]  # type: ignore [union-attr]
-else:
-    consts.MIRRORS = []
+
+
+class SubscribersInfo(TypedDict):
+    """A TypedDict to describe a subscriber.
+
+    For use as the values in a subscribers member of a Chatbot instance, the
+    keys to which are to be strings of WhatsApp contact information of the form
+    "whatsapp:<phone number with country code>".
+    """
+    name: str  # username registered with WhatsApp
+    lang: str  # user's preferred language code
+    role: str  # user's privilege level, "user", "admin", or "super"
+
 
 class Chatbot:
     """The chatbot logic.
 
     Class variables:
         commands -- List of slash commands for the bot
+        languages -- Data shared by all chatbots on the server about the
+            languages supported by LibreTranslate
 
     Instance variables:
         client -- Client with which to access the Twilio API
@@ -53,8 +59,6 @@ class Chatbot:
         subscribers -- Dictionary containing the data loaded from the file
 
     Methods:
-        reply -- Reply to a message to the bot
-        push -- Push a message to one or more recipients given their numbers
         process_cmd -- Process a slash command and send a reply from the bot
     """
     commands = [
@@ -64,13 +68,10 @@ class Chatbot:
         consts.ADMIN,
         consts.LIST,
         consts.LANG]
+    """All slash commands for the bot."""
 
-    languages = [consts.CZECH, consts.ENGLISH, consts.SPANISH, consts.UKRANIAN]
-
-    test_err = "".join([
-        "Please provide a valid language to test with. Example:\n" +
-        "\t/test spanish Hello everybody!\nValid languages:"
-    ] + list(map(lambda l: ("\n" + l.capitalize()), languages)))
+    languages: LangData | None = None
+    """Data for all languages supported by LibreTranslate."""
 
     def __init__(
             self,
@@ -78,7 +79,7 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/template.json"):
-        """Create the ChatBot object.
+        """Create the ChatBot object and populate class members as needed.
 
         Arguments:
             account_sid -- Account SID
@@ -87,13 +88,15 @@ class Chatbot:
                 extension
             json_file -- Path to a JSON file containing subscriber data
         """
+        if Chatbot.languages is None:
+            Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
         with open(json_file, encoding="utf-8") as file:
-            self.subscribers = json.load(file)
+            self.subscribers: Dict[str, SubscribersInfo] = json.load(file)
 
-    def reply(self, msg_body: str) -> str:
+    def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
 
         Arguments:
@@ -107,80 +110,68 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def push(self, msg_body: str, recipients: List[str]):
-        """Push a message to one or more recipients given their numbers.
+    def _push(self, text: str, sender: str) -> str:
+        """Push a translated message to one or more recipients.
 
         Arguments:
-            msg_body -- Contents of the message
-            recipients -- List of recipients' WhatsApp contact info (see key in
-                bot_subscribers/template.json for an example of how these are
-                formatted)
-        """
-        for r in recipients:
-            msg = self.client.messages.create(
-                from_=f"whatsapp:{self.number}",
-                to=r,
-                body=msg_body)
-            print(msg.sid)
-
-    @staticmethod
-    def translate_to(text: str, target_lang: str) -> str:
-        """Translate text to the target language using the LibreTranslate API.
-
-        Arguments:
-            text -- The text to be translated
-            target_lang -- The target language code ('en', 'es', 'fr', etc.)
+            text -- Contents of the message
+            sender -- Sender's WhatsApp contact info
 
         Returns:
-            Translated text
+            An empty string to the sender, or else an error message if the
+                request to the LibreTranslate API times out or has some other
+                error.
         """
-        payload = {"q": text, "source": "auto", "target": target_lang}
-        to = os.getenv("TRANSLATION_TIMEOUT")
-        timeout = int(to) if to is not None else 5
-        idx = 0  # index in urls
-        res = None
-        while res is None and idx < len(consts.MIRRORS):
-            try:
-                res = requests.post(
-                    consts.MIRRORS[idx],
-                    data=payload,
-                    timeout=timeout)
-            except TimeoutError:
-                idx = idx + 1
-        if res is None:  # ran out of mirrors to try
-            return "Translation timed out"
-        elif res.status_code == 200:
-            return res.json()["translatedText"]
-        else:
-            return f"Translation failed: HTTP {res.status_code} {res.reason}"
+        translations: Dict[str, str] = {}  # cache previously translated values
+        for s in self.subscribers.keys():
+            if s != sender:
+                if self.subscribers[s]["lang"] in translations:
+                    translated = translations[self.subscribers[s]["lang"]]
+                else:
+                    try:
+                        translated = translate_to(
+                            text, self.subscribers[s]["lang"])
+                    except (TimeoutError, requests.HTTPError) as e:
+                        return str(e)
+                    translations[self.subscribers[s]["lang"]] = translated
+                msg = self.client.messages.create(
+                    from_=f"whatsapp:{self.number}",
+                    to=s,
+                    body=translated)
+                print(msg.sid)
+        return ""
 
-    @staticmethod
-    def test_translate(msg: str, sender: Dict[str, str]):
+    def _test_translate(self, msg: str, sender: str) -> str:
         """Translate a string to a language, then to a user's native language.
 
         Arguments:
             msg -- message to translate
-            sender -- user requesting the translation
+            sender -- number of the user requesting the translation
 
         Returns:
-            The translated message.
+            The translated message, or else an error message if the request to
+                the LibreTranslate API times out or has some other error.
         """
+        sender_lang = self.subscribers[sender]["lang"]
         try:
-            lang = msg.split()[1].lower()
-            if lang not in Chatbot.languages:
-                return Chatbot.test_err
+            l = msg.split()[1].lower()
+            # TODO: replace with dictionary solution for task 235
+            if l not in Chatbot.languages.codes:  # type: ignore [union-attr]
+                return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                    sender_lang)
         except IndexError:
-            return Chatbot.test_err
+            return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                sender_lang)
         # Translate to requested language then back to native language
-        translated = Chatbot.translate_to(
-            "".join(msg.split()[2:]), lang)
-        return Chatbot.translate_to(translated, sender["lang"])
-
-    def list_subscribers(self) -> str:
-        # Convert the dictionary of subscribers to a formatted JSON string
-        subscribers_list = json.dumps(self.subscribers, indent=2)
-        # Return a string that includes the formatted JSON string
-        return f"List of subscribers:\n{subscribers_list}"
+        text = " ".join(msg.split()[2:])
+        if text != "":
+            try:
+                translated = translate_to(text, l)
+                return translate_to(translated, sender_lang)
+            except (TimeoutError, requests.HTTPError) as e:
+                return str(e)
+        return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+            sender_lang)
 
     def process_msg(
             self,
@@ -206,14 +197,18 @@ class Chatbot:
         word_1 = msg.split()[0].lower()
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
-                return Chatbot.test_translate(msg, sender)
+                return self._reply(self._test_translate(msg, sender_contact))
+            elif word_1[0:1] == "/" and len(word_1) > 1:
+                return ""  # ignore invalid/unauthorized command
             else:  # just send a message
-                # TODO:
-                pass
+                text = sender_name + " says:\n" + msg
+                self._push(text, sender_contact)
         else:
             match word_1:
                 case consts.TEST:  # test translate
-                    return Chatbot.test_translate(msg, sender)
+                    test_translation = self._test_translate(
+                        msg, sender_contact)
+                    return self._reply(test_translation)
                 case consts.ADD:  # add user to subscribers
                     # TODO:
                     pass
@@ -224,23 +219,28 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    response = self.list_subscribers()
-                    print(f"List response: {response}")
-                    return response
+                    subscribers = json.dumps(self.subscribers, indent=2)
+                    return self._reply(f"List of subscribers:\n{subscribers}")
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
                 case _:  # just send a message
-                    # TODO: actually send, put the translate logic in send
-                    translated_msg = self.translate_to(msg, "es")
-                    return f"Translated message: {translated_msg}"
-        return ""  # TODO: whatever is returned is sent to user who sent command
+                    if word_1[0:1] == "/" and len(word_1) > 1:
+                        return ""  # ignore invalid/unauthorized command
+                    text = sender_name + " says:\n" + msg
+                    return self._push(text, sender_contact)
+        return ""
+
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-# TODO: add subscriber JSON file
-mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+mr_botty = Chatbot(
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_NUMBER,
+    SUBSCRIBER_FILE)
 """Global Chatbot object, of which there could theoretically be many."""
