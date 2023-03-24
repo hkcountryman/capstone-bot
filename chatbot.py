@@ -30,7 +30,13 @@ consts.LANG = "/lang"  # set language for user
 consts.USER = "user"  # can only execute test translation command
 consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
+VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 
+# Load the valid language codes from the JSON file
+with open('languages.json', 'r') as f:
+    languages_data = json.load(f)
+
+VALID_LANGUAGES = [lang['code'] for lang in languages_data]
 
 class SubscribersInfo(TypedDict):
     """A TypedDict to describe a subscriber.
@@ -78,7 +84,7 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/template.json"):
+            json_file: str = "bot_subscribers/team56test.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -173,6 +179,55 @@ class Chatbot:
         return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
             sender_lang)
 
+    def add_subscriber(self, msg: str, sender_contact: str) -> str:
+        """Add a new subscriber to the dictionary and save it to team56test.json.
+
+        Arguments:
+            msg -- the message sent to the bot
+            sender_contact -- WhatsApp contact info of the sender
+
+        Returns:
+            A string suitable for returning from a Flask route endpoint.
+        """
+        # Split the message into parts
+        parts = msg.split()
+
+        # Check if there are enough arguments
+        if len(parts) == 4:
+            new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
+
+            # Check if the role is valid
+            if new_role not in VALID_ROLES:
+                return f"Invalid role. Use one of the following: {', '.join(VALID_ROLES)}"
+
+            # Check if the language code is valid
+            if new_lang not in VALID_LANGUAGES:
+                return f"Invalid language code. Please use a valid language code from the following list: {', '.join(VALID_LANGUAGES)}"
+
+            # Check if the sender is an admin or super
+            if self.subscribers.get(sender_contact, {}).get("role") in [consts.ADMIN, consts.SUPER]:
+                new_contact_key = f"whatsapp:{new_contact}"
+                # Check if the user already exists
+                if new_contact_key in self.subscribers:
+                    return "User already exists."
+
+                self.subscribers[new_contact_key] = {
+                    "lang": new_lang,
+                    "role": new_role
+                }
+
+                # Save the updated subscribers to team56test.json
+                with open(self.json_file, 'w') as f:
+                    json.dump(self.subscribers, f, indent=4)
+
+                return "New user added successfully."
+            else:
+                return "You don't have permission to add a new user."
+        else:
+            return "Invalid command format. Use: /add +1<whatsapp_contact> <language> <role>"
+
+
+
     def process_msg(
             self,
             msg: str,
@@ -210,8 +265,8 @@ class Chatbot:
                         msg, sender_contact)
                     return self._reply(test_translation)
                 case consts.ADD:  # add user to subscribers
-                    # TODO:
-                    pass
+                    # Call the add_subscriber method and return its response
+                    return self.add_subscriber(msg, sender_contact)
                 case consts.REMOVE:  # remove user from subscribers
                     # TODO:
                     pass
