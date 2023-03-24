@@ -9,6 +9,7 @@ instance of such a chatbot for import by the Flask app.
 
 import json
 from cryptography.fernet import Fernet
+from filelock import Timeout, FileLock
 import os
 from types import SimpleNamespace
 from typing import Dict, List
@@ -241,8 +242,11 @@ class Chatbot:
                     subscribers_list_byte = subscribers_list.encode('utf-8')
                     f = Fernet(self.key)
                     encrypted_data = f.encrypt(subscribers_list_byte)
-                    with open("bot_subscribers/template.json", 'wb') as file:
-                        file.write(encrypted_data)
+                    # Lock ensures two people cannot write to the file at the same time
+                    lock = FileLock("bot_subscribers/template.json.lock", timeout=1)
+                    with lock:
+                        with open("bot_subscribers/template.json", 'wb') as file:
+                            file.write(encrypted_data)
                     return
                 case consts.REMOVE:  # remove user from subscribers
                     # TODO:
