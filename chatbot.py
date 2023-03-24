@@ -225,7 +225,12 @@ class Chatbot:
         else:
             return "Invalid command format. Use: /add +1<whatsapp_contact> <language> <role>"
 
-    def list_subscribers(self) -> str:
+    def list_subscribers(self, sender_contact: str) -> str:
+        # Check if the sender is an admin or super
+        sender_role = self.subscribers.get(sender_contact, {}).get("role")
+        if sender_role not in [consts.ADMIN, consts.SUPER]:
+            return ""
+
         # Convert the dictionary of subscribers to a formatted JSON string
         subscribers_list = json.dumps(self.subscribers, indent=2)
         # Return a string that includes the formatted JSON string
@@ -277,7 +282,9 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    return self.list_subscribers()
+                    # return self.list_subscribers()
+                    response = self.list_subscribers()
+                    return response
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass

@@ -47,7 +47,7 @@ def bot() -> str:
     """
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
     if msg.strip() == "/list":
-        response_text = mr_botty.list_subscribers()
+        response_text = mr_botty.list_subscribers(sender_contact)
     else:
         response_text = mr_botty.process_msg(msg, sender_contact, sender_name)
     response = MessagingResponse()
