@@ -96,10 +96,10 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
-        with open(json_file, encoding="utf-8") as file:
-            self.subscribers = json.load(file)
-        # with open(json_file, 'rb') as file:
-            # encrypted_data = file.read()
+        # with open(json_file, encoding="utf-8") as file:
+        # self.subscribers = json.load(file)
+        with open(json_file, 'rb') as file:
+            encrypted_data = file.read()
         if not os.path.isfile(key_file):
             self.key = Fernet.generate_key()
             with open('bot_subscribers/key.key', 'xb') as file:
@@ -107,8 +107,8 @@ class Chatbot:
         else:
             with open('bot_subscribers/key.key', 'rb') as file:
                 self.key = file.read()
-        # f = Fernet(self.key)
-        # self.list_subscribers = f.decrypt(encrypted_data).decode('utf-8')
+        f = Fernet(self.key)
+        self.subscribers = f.decrypt(encrypted_data).decode('utf-8')
 
     def reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -196,12 +196,6 @@ class Chatbot:
     def list_subscribers(self) -> str:
         # Convert the dictionary of subscribers to a formatted JSON string
         subscribers_list = json.dumps(self.subscribers, indent=2)
-        # Create byte version of JSON string
-        subscribers_list_byte = subscribers_list.encode('utf-8')
-        f = Fernet(self.key)
-        encrypted_data = f.encrypt(subscribers_list_byte)
-        with open("bot_subscribers/template.json", 'wb') as file:
-            file.write(encrypted_data)
         # Return a string that includes the formatted JSON string
         return f"List of subscribers:\n{subscribers_list}"
 
@@ -238,8 +232,17 @@ class Chatbot:
                 case consts.TEST:  # test translate
                     return Chatbot.test_translate(msg, sender)
                 case consts.ADD:  # add user to subscribers
-                    # TODO:
-                    pass
+                    # Save new user to JSON file
+                    # Convert the dictionary of subscribers to a formatted JSON
+                    # string
+                    subscribers_list = json.dumps(self.subscribers, indent=2)
+                    # Create byte version of JSON string
+                    subscribers_list_byte = subscribers_list.encode('utf-8')
+                    f = Fernet(self.key)
+                    encrypted_data = f.encrypt(subscribers_list_byte)
+                    with open("bot_subscribers/template.json", 'wb') as file:
+                        file.write(encrypted_data)
+                    return
                 case consts.REMOVE:  # remove user from subscribers
                     # TODO:
                     pass
