@@ -35,7 +35,6 @@ VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 # Load the valid language codes from the JSON file
 with open('languages.json', 'r') as f:
     languages_data = json.load(f)
-
 VALID_LANGUAGES = [lang['code'] for lang in languages_data]
 
 class SubscribersInfo(TypedDict):
@@ -226,7 +225,11 @@ class Chatbot:
         else:
             return "Invalid command format. Use: /add +1<whatsapp_contact> <language> <role>"
 
-
+    def list_subscribers(self) -> str:
+        # Convert the dictionary of subscribers to a formatted JSON string
+        subscribers_list = json.dumps(self.subscribers, indent=2)
+        # Return a string that includes the formatted JSON string
+        return f"List of subscribers:\n{subscribers_list}"
 
     def process_msg(
             self,
@@ -274,8 +277,8 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    subscribers = json.dumps(self.subscribers, indent=2)
-                    return self._reply(f"List of subscribers:\n{subscribers}")
+                    response = self.list_subscribers()
+                    return response
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
