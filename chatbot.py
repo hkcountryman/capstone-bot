@@ -108,7 +108,8 @@ class Chatbot:
             with open('bot_subscribers/key.key', 'rb') as file:
                 self.key = file.read()
         f = Fernet(self.key)
-        self.subscribers = f.decrypt(encrypted_data).decode('utf-8')
+        unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
+        self.subscribers = json.loads(unencrypted_data)
 
     def reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
