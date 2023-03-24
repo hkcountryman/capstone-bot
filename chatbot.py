@@ -30,12 +30,8 @@ consts.LANG = "/lang"  # set language for user
 consts.USER = "user"  # can only execute test translation command
 consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
-VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
+consts.VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 
-# Load the valid language codes from the JSON file
-with open('languages.json', 'r') as f:
-    languages_data = json.load(f)
-VALID_LANGUAGES = [lang['code'] for lang in languages_data]
 
 class SubscribersInfo(TypedDict):
     """A TypedDict to describe a subscriber.
@@ -44,7 +40,6 @@ class SubscribersInfo(TypedDict):
     keys to which are to be strings of WhatsApp contact information of the form
     "whatsapp:<phone number with country code>".
     """
-    name: str  # username registered with WhatsApp
     lang: str  # user's preferred language code
     role: str  # user's privilege level, "user", "admin", or "super"
 
@@ -160,7 +155,6 @@ class Chatbot:
         sender_lang = self.subscribers[sender]["lang"]
         try:
             l = msg.split()[1].lower()
-            # TODO: replace with dictionary solution for task 235
             if l not in Chatbot.languages.codes:  # type: ignore [union-attr]
                 return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
                     sender_lang)
@@ -179,7 +173,7 @@ class Chatbot:
             sender_lang)
 
     def add_subscriber(self, msg: str, sender_contact: str) -> str:
-        """Add a new subscriber to the dictionary and save it to team56test.json.
+        """Add a new subscriber to the dictionary and save it to the JSON file.
 
         Arguments:
             msg -- the message sent to the bot
@@ -188,6 +182,8 @@ class Chatbot:
         Returns:
             A string suitable for returning from a Flask route endpoint.
         """
+        sender_lang = self.subscribers[sender_contact]["lang"]
+
         # Split the message into parts
         parts = msg.split()
 
@@ -196,45 +192,36 @@ class Chatbot:
             new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
 
             # Check if the role is valid
-            if new_role not in VALID_ROLES:
-                return f"Invalid role. Use one of the following: {', '.join(VALID_ROLES)}"
+            if new_role not in consts.VALID_ROLES:
+                return Chatbot.languages.get_add_rol_err(  # type: ignore [union-attr]
+                    sender_lang)
 
             # Check if the language code is valid
-            if new_lang not in VALID_LANGUAGES:
-                return f"Invalid language code. Please use a valid language code from the following list: {', '.join(VALID_LANGUAGES)}"
+            if new_lang not in \
+                    Chatbot.languages.codes:  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
+                    sender_lang)
 
-            # Check if the sender is an admin or super
-            if self.subscribers.get(sender_contact, {}).get("role") in [consts.ADMIN, consts.SUPER]:
-                new_contact_key = f"whatsapp:{new_contact}"
-                # Check if the user already exists
-                if new_contact_key in self.subscribers:
-                    return "User already exists."
+            new_contact_key = f"whatsapp:{new_contact}"
+            # Check if the user already exists
+            if new_contact_key in self.subscribers:
+                return Chatbot.languages.get_exists_err(  # type: ignore [union-attr]
+                    sender_lang)
 
-                self.subscribers[new_contact_key] = {
-                    "lang": new_lang,
-                    "role": new_role
-                }
+            self.subscribers[new_contact_key] = {
+                "lang": new_lang,
+                "role": new_role
+            }
 
-                # Save the updated subscribers to team56test.json
-                with open(self.json_file, 'w') as f:
-                    json.dump(self.subscribers, f, indent=4)
+            # Save the updated subscribers to team56test.json
+            with open(self.json_file, 'w') as f:  # TODO: locking mechanism
+                json.dump(self.subscribers, f, indent=4)
 
-                return "New user added successfully."
-            else:
-                return "You don't have permission to add a new user."
+            return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
+                sender_lang)
         else:
-            return "Invalid command format. Use: /add +1<whatsapp_contact> <language> <role>"
-
-    def list_subscribers(self, sender_contact: str) -> str:
-        # Check if the sender is an admin or super
-        sender_role = self.subscribers.get(sender_contact, {}).get("role")
-        if sender_role not in [consts.ADMIN, consts.SUPER]:
-            return ""
-
-        # Convert the dictionary of subscribers to a formatted JSON string
-        subscribers_list = json.dumps(self.subscribers, indent=2)
-        # Return a string that includes the formatted JSON string
-        return f"List of subscribers:\n{subscribers_list}"
+            return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
+                sender_lang)
 
     def process_msg(
             self,
@@ -274,7 +261,9 @@ class Chatbot:
                     return self._reply(test_translation)
                 case consts.ADD:  # add user to subscribers
                     # Call the add_subscriber method and return its response
-                    return self.add_subscriber(msg, sender_contact)
+                    return self._reply(
+                        self.add_subscriber(
+                            msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
                     # TODO:
                     pass
@@ -282,9 +271,8 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    # return self.list_subscribers()
-                    response = self.list_subscribers()
-                    return response
+                    subscribers = json.dumps(self.subscribers, indent=2)
+                    return self._reply(f"List of subscribers:\n{subscribers}")
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass

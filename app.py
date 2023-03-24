@@ -7,8 +7,6 @@ from typing import Tuple
 from flask import Flask, Request, request
 
 from chatbot import mr_botty
-from twilio.twiml.messaging_response import MessagingResponse
-
 
 app = Flask(__name__)
 """The server running the chatbot."""
@@ -46,10 +44,11 @@ def bot() -> str:
         The bot's response.
     """
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
-    if msg.strip() == "/list":
-        response_text = mr_botty.list_subscribers(sender_contact)
-    else:
-        response_text = mr_botty.process_msg(msg, sender_contact, sender_name)
-    response = MessagingResponse()
-    response.message(response_text)
-    return str(response)
+    # if msg.strip() == "/list":
+    #     response_text = mr_botty.list_subscribers(sender_contact)
+    # else:
+    #     response_text = mr_botty.process_msg(msg, sender_contact, sender_name)
+    # response = MessagingResponse()
+    # response.message(response_text)
+    # return str(response)
+    return mr_botty.process_msg(msg, sender_contact, sender_name)
