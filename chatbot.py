@@ -277,8 +277,7 @@ class Chatbot:
                     # TODO:
                     pass
                 case consts.LIST:  # list all subscribers with their data
-                    response = self.list_subscribers()
-                    return response
+                    return self.list_subscribers()
                 case consts.LANG:  # change preferred language of user
                     # TODO:
                     pass
