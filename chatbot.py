@@ -275,7 +275,7 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 # TODO: add subscriber JSON file
 mr_botty = Chatbot(
-    "AC40cc30898134e9e8d9a3286588e93121",
-    "e72e0296e5b7a9d3ab8d7301c9459f06",
+    ,
+    ,
     "+14155238886")
 """Global Chatbot object, of which there could theoretically be many."""
