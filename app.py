@@ -44,11 +44,4 @@ def bot() -> str:
         The bot's response.
     """
     (msg, sender_contact, sender_name) = get_incoming_msg(request)
-    # if msg.strip() == "/list":
-    #     response_text = mr_botty.list_subscribers(sender_contact)
-    # else:
-    #     response_text = mr_botty.process_msg(msg, sender_contact, sender_name)
-    # response = MessagingResponse()
-    # response.message(response_text)
-    # return str(response)
     return mr_botty.process_msg(msg, sender_contact, sender_name)
