@@ -35,18 +35,38 @@ consts.TIMEOUT = _get_timeout()  # seconds before requests time out
 
 # Strings for use in error messages
 error_messages = SimpleNamespace()
+error_messages.example = "Example:"  # preface errors
 error_messages.lang_err = "Choose a valid language. Example:"  # preface errors
 error_messages.test_err = "\n/test es How are you today?\n\n"  # /test example
+error_messages.add_lng_err = "\n/add +12005555555 en user\n\n"
 error_messages.lang_list = ""  # list of all valid languages
+error_messages.rol_err = "Choose a valid role"  # preface errors
+error_messages.roles = " (user | admin | super)"
+error_messages.exists_err = "User already exists"
+
+# Strings for success messages
+success = SimpleNamespace()
+success.added = "New user added"  # /add
 
 
 class LangEntry(TypedDict):
     """A TypedDict to describe associated data for some language code."""
+    # Language data
     name: str  # human-readable name
     targets: List[str]  # codes for targets this language can be translated to
+
+    # Errors
     lang_list: str | None  # list of valid languages in this language
-    lang_err: str | None  # generic error header in this language
+    example: str | None  # "Example:"
+    lang_err: str | None  # generic error header for invalid languages in this language
     test_err: str | None  # /test error message in this language
+    add_lng_err: str | None  # /add language error message in this language
+    rol_err: str | None  # generic error header for invalid roles in this language
+    add_rol_err: str | None  # /add role error message in this language
+    exists_err: str | None  # /add error if user exists
+
+    # Success messages
+    added: str | None  # /add
 
 
 class LangData:
@@ -63,7 +83,8 @@ class LangData:
             corresponding LangEntry dictionaries
 
     Methods:
-        get_test_err -- get the test error message for a given language code
+        get_test_err -- get the /test error message for a given language code
+        get_add_lng_err -- get the /add error message for a given language code
     """
 
     def __init__(self):
@@ -93,8 +114,14 @@ class LangData:
                 "name": lang["name"],
                 "targets": lang["targets"],
                 "lang_list": None,
+                "example": None,
                 "lang_err": None,
-                "test_err": None}
+                "test_err": None,
+                "add_lng_err": None,
+                "rol_err": None,
+                "add_rol_err": None,
+                "exists_err": None,
+                "added": None}
         error_messages.lang_list = "".join(
             ["Languages:"] + list(map(lambda l: (f"\n{l}"), self.names)))
 
@@ -124,7 +151,7 @@ class LangData:
         return self.entries[code]["lang_list"]  # type: ignore [return-value]
 
     def _get_lang_err(self, code: str) -> str:
-        """Get a translated generic error header.
+        """Get a translated generic error header for invalid languages.
 
         Arguments:
             code -- Code of the language to translate the output to
@@ -144,6 +171,14 @@ class LangData:
         return self.entries[code]["lang_err"]  # type: ignore [return-value]
 
     def get_test_err(self, code: str) -> str:
+        """Get a translated error when /test command is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
         if self.entries[code]["test_err"] is None:
             try:
                 self.entries[code]["test_err"] = self._get_lang_err(
@@ -151,9 +186,125 @@ class LangData:
             except (TimeoutError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
-                return error_messages.lang_err + error_messages.test_err + \
+                return error_messages.lang_err + error_messages.test_err +\
                     error_messages.lang_list
         return self.entries[code]["test_err"]  # type: ignore [return-value]
+
+    def get_add_lng_err(self, code: str) -> str:
+        """Get a translated error when /add command uses an invalid language.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_lng_err"] is None:
+            try:
+                self.entries[code]["add_lng_err"] = self._get_lang_err(
+                    code) + error_messages.add_lng_err + self._get_lang_list(code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.lang_err +\
+                    error_messages.add_lng_err + error_messages.lang_list
+        return self.entries[code]["add_lng_err"]  # type: ignore [return-value]
+
+    def _get_rol_err(self, code: str) -> str:
+        """Get a translated error when a role is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+
+        Raises:
+            TimeoutError -- If all mirrors time out before providing a
+                translation
+            HTTPError -- If a non-OK response is received from the
+                LibreTranslate API
+        """
+        if self.entries[code]["rol_err"] is None:
+            self.entries[code]["rol_err"] = translate_to(
+                error_messages.rol_err, code)
+        return self.entries[code]["rol_err"]  # type: ignore [return-value]
+
+    def get_add_rol_err(self, code: str) -> str:
+        """Get a translated error when a role is invalid + list of valid roles.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_rol_err"] is None:
+            try:
+                self.entries[code]["add_rol_err"] = self._get_rol_err(
+                    code) + error_messages.roles
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.rol_err + error_messages.roles
+        return self.entries[code]["add_rol_err"]  # type: ignore [return-value]
+
+    def get_exists_err(self, code: str) -> str:
+        """Get a translated error when an added user already exists.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["exists_err"] is None:
+            try:
+                self.entries[code]["exists_err"] = translate_to(
+                    error_messages.exists_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.exists_err
+        return self.entries[code]["exists_err"]  # type: ignore [return-value]
+
+    def get_add_err(self, code: str) -> str:
+        """Get a translated error when /add command is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["example"] is None:
+            try:
+                self.entries[code]["example"] = translate_to(
+                    error_messages.example, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.example
+        return self.entries[code]["example"]  # type: ignore [return-value]
+
+    def get_add_success(self, code: str) -> str:
+        """Get a translated success message upon adding a user.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["added"] is None:
+            try:
+                self.entries[code]["added"] = translate_to(
+                    success.added, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the message at the moment, compromise
+                # and return it in English
+                return success.added
+        return self.entries[code]["added"]  # type: ignore [return-value]
 
 
 def translate_to(text: str, target_lang: str) -> str:
