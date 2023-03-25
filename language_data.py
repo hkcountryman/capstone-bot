@@ -35,18 +35,22 @@ consts.TIMEOUT = _get_timeout()  # seconds before requests time out
 
 # Strings for use in error messages
 error_messages = SimpleNamespace()
-error_messages.example = "Example:"  # preface errors
-error_messages.lang_err = "Choose a valid language. Example:"  # preface errors
-error_messages.test_err = "\n/test es How are you today?\n\n"  # /test example
-error_messages.add_lng_err = "\n/add +12005555555 en user\n\n"
+error_messages.add_example = "Example: /add +12345678900 en user"  # preface errors
+error_messages.remove_example = "Example: /remove +12345678900"  # preface errors
+error_messages.lang_err = "Choose a valid language.\n\n"  # preface errors
+error_messages.test_err = "/test es How are you today?\n\n"  # /test example
+error_messages.add_lng_err = "\n/add +12345678900 en user\n\n"
 error_messages.lang_list = ""  # list of all valid languages
-error_messages.rol_err = "Choose a valid role"  # preface errors
+error_messages.rol_err = "Choose a valid role:"  # preface errors
 error_messages.roles = " (user | admin | super)"
-error_messages.exists_err = "User already exists"
+error_messages.exists_err = "User already exists."
+error_messages.not_found_err = "User not found."
+error_messages.remove_self_err = "You cannot remove yourself."
 
 # Strings for success messages
 success = SimpleNamespace()
-success.added = "New user added"  # /add
+success.added = "New user added successfully."  # /add
+success.removed = "User removed successfully."
 
 
 class LangEntry(TypedDict):
@@ -57,17 +61,20 @@ class LangEntry(TypedDict):
 
     # Errors
     lang_list: str | None  # list of valid languages in this language
-    example: str | None  # "Example:"
+    add_example: str | None  # /add example
+    remove_example: str | None # /remove example
     lang_err: str | None  # generic error header for invalid languages in this language
     test_err: str | None  # /test error message in this language
     add_lng_err: str | None  # /add language error message in this language
     rol_err: str | None  # generic error header for invalid roles in this language
     add_rol_err: str | None  # /add role error message in this language
     exists_err: str | None  # /add error if user exists
+    not_found_err: str | None # /remove error if user not found
+    remove_self_err: str | None # /remove error if user tries to remove self
 
     # Success messages
     added: str | None  # /add
-
+    removed: str | None  # /remove
 
 class LangData:
     """An object that can hold all language data.
@@ -114,14 +121,18 @@ class LangData:
                 "name": lang["name"],
                 "targets": lang["targets"],
                 "lang_list": None,
-                "example": None,
+                "add_example": None,
+                "remove_example": None,
                 "lang_err": None,
                 "test_err": None,
                 "add_lng_err": None,
                 "rol_err": None,
                 "add_rol_err": None,
                 "exists_err": None,
-                "added": None}
+                "added": None,
+                "not_found_err": None,
+                "removed": None,
+                "remove_self_err": None}
         error_messages.lang_list = "".join(
             ["Languages:"] + list(map(lambda l: (f"\n{l}"), self.names)))
 
@@ -202,7 +213,7 @@ class LangData:
         if self.entries[code]["add_lng_err"] is None:
             try:
                 self.entries[code]["add_lng_err"] = self._get_lang_err(
-                    code) + error_messages.add_lng_err + self._get_lang_list(code)
+                    code) + self._get_lang_list(code)
             except (TimeoutError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
@@ -277,15 +288,15 @@ class LangData:
         Returns:
             The translated output.
         """
-        if self.entries[code]["example"] is None:
+        if self.entries[code]["add_example"] is None:
             try:
-                self.entries[code]["example"] = translate_to(
-                    error_messages.example, code)
+                self.entries[code]["add_example"] = translate_to(
+                    error_messages.add_example, code)
             except (TimeoutError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
-                return error_messages.example
-        return self.entries[code]["example"]  # type: ignore [return-value]
+                return error_messages.add_example
+        return self.entries[code]["add_example"]  # type: ignore [return-value]
 
     def get_add_success(self, code: str) -> str:
         """Get a translated success message upon adding a user.
@@ -306,6 +317,73 @@ class LangData:
                 return success.added
         return self.entries[code]["added"]  # type: ignore [return-value]
 
+    def get_not_found_err(self, code: str) -> str:
+        """Get a translated error when the user is not found for the /remove command.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["not_found_err"] is None:
+            try:
+                self.entries[code]["not_found_err"] = translate_to(
+                    error_messages.not_found_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.not_found_err
+        return self.entries[code]["not_found_err"]  # type: ignore [return-value]
+    
+    def get_remove_err(self, code: str) -> str:
+        """Get a translated success message upon removing a user.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["remove_example"] is None:
+            try:
+                self.entries[code]["remove_example"] = translate_to(
+                    error_messages.remove_example, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.remove_example
+        return self.entries[code]["remove_example"]  # type: ignore [return-value]
+    
+    def get_remove_self_err(self, code: str) -> str:
+        if self.entries[code]["remove_self_err"] is None:
+            try:
+                self.entries[code]["remove_self_err"] = translate_to(
+                    error_messages.remove_self_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return error_messages.remove_self_err
+        return self.entries[code]["remove_self_err"]  # type: ignore [return-value]
+
+    def get_remove_success(self, code: str) -> str:
+        """Get a translated success message upon adding a user.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["removed"] is None:
+            try:
+                self.entries[code]["removed"] = translate_to(
+                    success.removed, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the message at the moment, compromise
+                # and return it in English
+                return success.removed
+        return self.entries[code]["removed"]  # type: ignore [return-value]
 
 def translate_to(text: str, target_lang: str) -> str:
     """Translate text to the target language using the LibreTranslate API.

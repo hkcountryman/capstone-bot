@@ -214,7 +214,7 @@ class Chatbot:
             }
 
             # Save the updated subscribers to team56test.json
-            with open(self.json_file, 'w') as f:  # TODO: locking mechanism
+            with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
                 json.dump(self.subscribers, f, indent=4)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
@@ -222,6 +222,51 @@ class Chatbot:
         else:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
+
+    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
+        """
+        Remove a subscriber from the dictionary and save the updated dictionary to the JSON file.
+
+        Arguments:
+            msg -- the message sent to the bot
+            sender_contact -- WhatsApp contact info of the sender
+
+        Returns:
+            A string suitable for returning from a Flask route endpoint, indicating the result of the removal attempt.
+        """
+        sender_lang = self.subscribers[sender_contact]["lang"]
+        sender_role = self.subscribers[sender_contact]["role"]
+
+        # Split the message into parts
+        parts = msg.split()
+
+        # Check if there are enough arguments
+        if len(parts) == 2:
+            user_contact = parts[1]
+            user_contact_key = f"whatsapp:{user_contact}"
+
+            # Prevent sender from removing themselves
+            # sender_contact = 2345678900 and user_contact = +12345678900
+            # Need a way to fix this.
+            if sender_contact == user_contact:
+                return Chatbot.languages.get_remove_self_err(sender_lang)
+
+            # Check if the user exists
+            if user_contact_key not in self.subscribers:
+                return Chatbot.languages.get_not_found_err(sender_lang)  # type: ignore [union-attr]
+
+            # Check if the sender has the necessary privileges
+            if sender_role == consts.SUPER or (sender_role == consts.ADMIN and self.subscribers[user_contact_key]["role"] != consts.SUPER):
+                del self.subscribers[user_contact_key]
+
+                # Save the updated subscribers to team56test.json
+                with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
+                    json.dump(self.subscribers, f, indent=4)
+
+                return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
+                    sender_lang)
+        else:
+            return Chatbot.languages.get_remove_err(sender_lang)  # type: ignore [union-attr]
 
     def process_msg(
             self,
@@ -265,8 +310,7 @@ class Chatbot:
                         self.add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
-                    # TODO:
-                    pass
+                    return self._reply(self.remove_subscriber(msg, sender_contact))
                 case consts.ADMIN:  # toggle user -> admin or admin -> user
                     # TODO:
                     pass
