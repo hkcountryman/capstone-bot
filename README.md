@@ -129,7 +129,13 @@ to create a pre-commit git hook script. You should only need to do this once. Ev
 
 #### LibreTranslate
 
-If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
+If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda). Another reason is so that WhatsApp's end-to-end encryption is not rendered useless by sending all messages over the internet to a publically hosted server.
+
+If you choose to run the server locally, one easy way is through Docker:
+
+```bash
+docker-compose up -d --build
+```
 
 ### Running
 
@@ -218,7 +224,13 @@ pip install -r requirements.txt
 
 #### LibreTranslate
 
-If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda).
+If you wish to host your own LibreTranslate server, you may do so according to the instructions [here](https://github.com/LibreTranslate/LibreTranslate#install-and-run). One reason to do this would be if you need faster translations, especially if you have access to an Nvidia GPU and want to [take advantage of CUDA](https://github.com/LibreTranslate/LibreTranslate#cuda). Another reason is so that WhatsApp's end-to-end encryption is not rendered useless by sending all messages over the internet to a publically hosted server.
+
+If you choose to run the server locally, one easy way is through Docker:
+
+```bash
+docker-compose up -d --build
+```
 
 #### Environment variables
 
@@ -242,4 +254,8 @@ The example `nginx.conf` in this repository is suitable and can be placed in eit
 
 #### Gunicorn
 
-It will be installed already in the virtual environment.
+It will be installed already in the virtual environment. Run with
+
+```bash
+gunicorn -b :4000 bot:app
+```
