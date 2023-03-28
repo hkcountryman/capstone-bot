@@ -33,10 +33,10 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str]:
     return (msg, sender_contact, sender_name)
 
 
+@app.route("/bot", methods=["POST"])
 # TODO: theoretically we could support multiple bots on one server, but
 # they'd each need their own routing. Use case for blueprints? Might also
 # want to try the routes as keys in a dictionary containing Chatbot objects.
-@app.route("/bot", methods=["POST"])
 def bot() -> str:
     """Bot's response to a request.
 
