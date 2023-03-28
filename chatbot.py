@@ -156,10 +156,10 @@ class Chatbot:
         try:
             l = msg.split()[1].lower()
             if l not in Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
                     sender_lang)
         except IndexError:
-            return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+            return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
                 sender_lang)
         # Translate to requested language then back to native language
         text = " ".join(msg.split()[2:])
@@ -169,7 +169,7 @@ class Chatbot:
                 return translate_to(translated, sender_lang)
             except (TimeoutError, requests.HTTPError) as e:
                 return str(e)
-        return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+        return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
 
     def add_subscriber(self, msg: str, sender_contact: str) -> str:
@@ -312,9 +312,9 @@ class Chatbot:
         else:
             match word_1:
                 case consts.TEST:  # test translate
-                    test_translation = self._test_translate(
-                        msg, sender_contact)
-                    return self._reply(test_translation)
+                    return self._reply(
+                        self._test_translate(
+                            msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
                     # Call the add_subscriber method and return its response
                     return self._reply(
