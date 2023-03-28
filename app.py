@@ -30,6 +30,8 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str]:
         "From", type=str)  # type: ignore [assignment]
     sender_name: str = request.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
+    # TODO: If request has key MediaUrl# where # is a number, that is a link
+    # to a CDN with a file
     return (msg, sender_contact, sender_name)
 
 
