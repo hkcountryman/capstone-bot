@@ -197,7 +197,7 @@ class Chatbot:
                     sender_lang)
 
             # Check if the language code is valid
-            if new_lang not in \
+            if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
                 return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
                     sender_lang)
@@ -225,14 +225,17 @@ class Chatbot:
 
     def remove_subscriber(self, msg: str, sender_contact: str) -> str:
         """
-        Remove a subscriber from the dictionary and save the updated dictionary to the JSON file.
+        Remove a subscriber from the dictionary and save the updated dictionary.
+
+        to the JSON file.
 
         Arguments:
             msg -- the message sent to the bot
             sender_contact -- WhatsApp contact info of the sender
 
         Returns:
-            A string suitable for returning from a Flask route endpoint, indicating the result of the removal attempt.
+            A string suitable for returning from a Flask route endpoint,
+                indicating the result of the removal attempt.
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
         sender_role = self.subscribers[sender_contact]["role"]
@@ -247,16 +250,22 @@ class Chatbot:
 
             # Prevent sender from removing themselves
             # sender_contact = 2345678900 and user_contact = +12345678900
-            # Need a way to fix this.
+            # TODO: Need a way to fix this.
             if sender_contact == user_contact:
-                return Chatbot.languages.get_remove_self_err(sender_lang)
+                return Chatbot.languages.get_remove_self_err(  # type: ignore [union-attr]
+                    sender_lang)
 
             # Check if the user exists
             if user_contact_key not in self.subscribers:
-                return Chatbot.languages.get_not_found_err(sender_lang)  # type: ignore [union-attr]
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
 
             # Check if the sender has the necessary privileges
-            if sender_role == consts.SUPER or (sender_role == consts.ADMIN and self.subscribers[user_contact_key]["role"] != consts.SUPER):
+            if sender_role == consts.ADMIN and self.subscribers[
+                    user_contact_key]["role"] == consts.SUPER:
+                return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
+                    sender_lang)
+            else:
                 del self.subscribers[user_contact_key]
 
                 # Save the updated subscribers to team56test.json
@@ -266,7 +275,8 @@ class Chatbot:
                 return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                     sender_lang)
         else:
-            return Chatbot.languages.get_remove_err(sender_lang)  # type: ignore [union-attr]
+            return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
+                sender_lang)
 
     def process_msg(
             self,
@@ -298,6 +308,7 @@ class Chatbot:
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact)
+                return ""  # say nothing to sender
         else:
             match word_1:
                 case consts.TEST:  # test translate
@@ -310,22 +321,17 @@ class Chatbot:
                         self.add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
-                    return self._reply(self.remove_subscriber(msg, sender_contact))
-                case consts.ADMIN:  # toggle user -> admin or admin -> user
-                    # TODO:
-                    pass
+                    return self._reply(
+                        self.remove_subscriber(
+                            msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
                     subscribers = json.dumps(self.subscribers, indent=2)
                     return self._reply(f"List of subscribers:\n{subscribers}")
-                case consts.LANG:  # change preferred language of user
-                    # TODO:
-                    pass
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
                     return self._push(text, sender_contact)
-        return ""
 
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
