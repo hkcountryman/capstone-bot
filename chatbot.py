@@ -283,7 +283,6 @@ class Chatbot:
                     return self._push(text, sender_contact)
         return ""
 
-
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
 TWILIO_AUTH_TOKEN: str = os.getenv(
