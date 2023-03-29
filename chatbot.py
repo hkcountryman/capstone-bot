@@ -8,6 +8,7 @@ instance of such a chatbot for import by the Flask app.
 """
 
 import json
+from cryptography.fernet import Fernet
 import os
 from types import SimpleNamespace
 from typing import Dict, TypedDict
@@ -78,7 +79,8 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json"):
+            json_file: str = "bot_subscribers/team56test.json",
+            key_file: str = "bot_subscribers/key.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -87,14 +89,26 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
-        with open(json_file, encoding="utf-8") as file:
-            self.subscribers: Dict[str, SubscribersInfo] = json.load(file)
+        with open(json_file, 'rb') as file:
+            encrypted_data = file.read()
+        # Create a key or Retrieve a key if file already exists
+        if not os.path.isfile(key_file):
+            self.key = Fernet.generate_key()
+            with open(key_file, 'xb') as file:
+                file.write(self.key)
+        else:
+            with open(key_file, 'rb') as file:
+                self.key = file.read()
+        f = Fernet(self.key)
+        unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
+        self.subscribers: Dict[str, SubscribersInfo] = json.loads(unecrypted_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -214,8 +228,14 @@ class Chatbot:
             }
 
             # Save the updated subscribers to team56test.json
-            with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
-                json.dump(self.subscribers, f, indent=4)
+            # Convert the dictionary of subscribers to a formatted JSON string
+            subscribers_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            subscribers_list_byte = subscribers_list.encode('utf-8')
+            f = Fernet(self.key)
+            encrypted_data = f.encrypt(subscribers_list_byte)
+            with open(self.json_file, 'wb') as file:
+                file.write(encrypted_data)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
@@ -268,12 +288,18 @@ class Chatbot:
             else:
                 del self.subscribers[user_contact_key]
 
-                # Save the updated subscribers to team56test.json
-                with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
-                    json.dump(self.subscribers, f, indent=4)
+            # Save the updated subscribers to team56test.json
+            # Convert the dictionary of subscribers to a formatted JSON string
+            subscribers_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            subscribers_list_byte = subscribers_list.encode('utf-8')
+            f = Fernet(self.key)
+            encrypted_data = f.encrypt(subscribers_list_byte)
+            with open(self.json_file, 'wb') as file:
+                file.write(encrypted_data)
 
-                return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
-                    sender_lang)
+            return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
+                sender_lang)
         else:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
