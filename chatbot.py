@@ -108,7 +108,8 @@ class Chatbot:
                 self.key = file.read()
         f = Fernet(self.key)
         unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
-        self.subscribers: Dict[str, SubscribersInfo] = json.loads(unecrypted_data)
+        self.subscribers: Dict[str,
+                               SubscribersInfo] = json.loads(unencrypted_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -366,9 +367,11 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+KEY_FILE: str = "bot_subscribers/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
-    SUBSCRIBER_FILE)
+    SUBSCRIBER_FILE,
+    KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""
