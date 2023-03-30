@@ -160,10 +160,10 @@ class Chatbot:
         try:
             l = msg.split()[1].lower()
             if l not in Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
                     sender_lang)
         except IndexError:
-            return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+            return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
                 sender_lang)
         # Translate to requested language then back to native language
         text = " ".join(msg.split()[2:])
@@ -173,7 +173,7 @@ class Chatbot:
                 return translate_to(translated, sender_lang)
             except (TimeoutError, requests.HTTPError) as e:
                 return str(e)
-        return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
+        return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
     
     
@@ -213,7 +213,7 @@ class Chatbot:
                     sender_lang)
 
             # Check if the language code is valid
-            if new_lang not in \
+            if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
                 return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
                     sender_lang)
@@ -230,13 +230,68 @@ class Chatbot:
             }
 
             # Save the updated subscribers to team56test.json
-            with open(self.json_file, 'w') as f:  # TODO: locking mechanism
+            with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
                 json.dump(self.subscribers, f, indent=4)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
         else:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
+                sender_lang)
+
+    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
+        """
+        Remove a subscriber from the dictionary and save the updated dictionary.
+
+        to the JSON file.
+
+        Arguments:
+            msg -- the message sent to the bot
+            sender_contact -- WhatsApp contact info of the sender
+
+        Returns:
+            A string suitable for returning from a Flask route endpoint,
+                indicating the result of the removal attempt.
+        """
+        sender_lang = self.subscribers[sender_contact]["lang"]
+        sender_role = self.subscribers[sender_contact]["role"]
+
+        # Split the message into parts
+        parts = msg.split()
+
+        # Check if there are enough arguments
+        if len(parts) == 2:
+            user_contact = parts[1]
+            user_contact_key = f"whatsapp:{user_contact}"
+
+            # Prevent sender from removing themselves
+            # sender_contact = 2345678900 and user_contact = +12345678900
+            # TODO: Need a way to fix this.
+            if sender_contact == user_contact:
+                return Chatbot.languages.get_remove_self_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            # Check if the user exists
+            if user_contact_key not in self.subscribers:
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            # Check if the sender has the necessary privileges
+            if sender_role == consts.ADMIN and self.subscribers[
+                    user_contact_key]["role"] == consts.SUPER:
+                return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
+                    sender_lang)
+            else:
+                del self.subscribers[user_contact_key]
+
+                # Save the updated subscribers to team56test.json
+                with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
+                    json.dump(self.subscribers, f, indent=4)
+
+                return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
+                    sender_lang)
+        else:
+            return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
 
     def process_msg(
@@ -278,29 +333,25 @@ class Chatbot:
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact)
+                return ""  # say nothing to sender
         else:
             match word_1:
                 case consts.TEST:  # test translate
-                    test_translation = self._test_translate(
-                        msg, sender_contact)
-                    return self._reply(test_translation)
+                    return self._reply(
+                        self._test_translate(
+                            msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
                     # Call the add_subscriber method and return its response
                     return self._reply(
                         self.add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
-                    # TODO:
-                    pass
-                case consts.ADMIN:  # toggle user -> admin or admin -> user
-                    # TODO:
-                    pass
+                    return self._reply(
+                        self.remove_subscriber(
+                            msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
                     subscribers = json.dumps(self.subscribers, indent=2)
                     return self._reply(f"List of subscribers:\n{subscribers}")
-                case consts.LANG:  # change preferred language of user
-                    # TODO:
-                    pass
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
