@@ -277,8 +277,7 @@ class Chatbot:
                 return ""  # ignore invalid/unauthorized command
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
-                return self._push(text, sender_contact, media_urls)
-
+                self._push(text, sender_contact)
         else:
             match word_1:
                 case consts.TEST:  # test translate
@@ -306,7 +305,7 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    return self._push(text, sender_contact, media_urls)
+                    return self._push(text, sender_contact)
 
         # Send media messages, if any
         for media_url in media_urls:
