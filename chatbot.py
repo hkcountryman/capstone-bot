@@ -175,6 +175,18 @@ class Chatbot:
                 return str(e)
         return Chatbot.languages.get_test_err(  # type: ignore [union-attr]
             sender_lang)
+    
+    
+    def send_media_message(self, recipient_number: str, media_url: str, text: str = None):
+        client = Client(self.twilio_account_sid, self.twilio_auth_token)
+        message_data = {
+            "from": f"whatsapp:{self.twilio_number}",
+            "to": f"whatsapp:{recipient_number}",
+            "media_url": media_url,
+        }
+        if text:
+            message_data["body"] = text
+        client.messages.create(**message_data)
 
     def add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
@@ -226,17 +238,6 @@ class Chatbot:
         else:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
-
-    def send_media_message(self, recipient_number: str, media_url: str, text: str = None):
-        client = Client(self.twilio_account_sid, self.twilio_auth_token)
-        message_data = {
-            "from": f"whatsapp:{self.twilio_number}",
-            "to": f"whatsapp:{recipient_number}",
-            "media_url": media_url,
-        }
-        if text:
-            message_data["body"] = text
-        client.messages.create(**message_data)
 
     def process_msg(
             self,
