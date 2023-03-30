@@ -31,8 +31,12 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
     sender_name: str = request.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
 
-    media_urls = [request.values.get(f"MediaUrl{i}", type=str) for i in range(
-        10) if request.values.get(f"MediaUrl{i}") is not None]
+    media_urls = [
+        request.values.get(
+            f"MediaUrl{i}",
+            default=None,
+            type=str) for i in range(10)]
+    media_urls = [url for url in media_urls if url is not None]
 
     return (msg, sender_contact, sender_name, media_urls)
 

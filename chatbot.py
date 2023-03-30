@@ -93,6 +93,9 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
+        self.twilio_account_sid = account_sid
+        self.twilio_auth_token = auth_token
+        self.twilio_number = number
         with open(json_file, encoding="utf-8") as file:
             self.subscribers: Dict[str, SubscribersInfo] = json.load(file)
 
@@ -110,7 +113,11 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def _push(self, text: str, sender: str, media_urls: List[str] = []) -> str:
+    def _push(
+            self,
+            text: str,
+            sender: str,
+            media_urls: List[str] = "") -> str:
         """Push a translated message and media to one or more recipients.
 
         Arguments:
@@ -123,6 +130,9 @@ class Chatbot:
                 request to the LibreTranslate API times out or has some other
                 error.
         """
+        if media_urls is None:
+            media_urls = []
+
         translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
             if s != sender:
@@ -178,7 +188,7 @@ class Chatbot:
             self,
             recipient_number: str,
             media_url: str,
-            text: str = None):
+            text: str = ""):
         client = Client(self.twilio_account_sid, self.twilio_auth_token)
         message_data = {
             "from": f"whatsapp:{self.twilio_number}",
