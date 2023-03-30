@@ -10,9 +10,7 @@ instance of such a chatbot for import by the Flask app.
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, TypedDict
-from twilio.rest import Client
-from typing import List
+from typing import Dict, List, TypedDict
 
 import requests
 from twilio.rest import Client
@@ -175,9 +173,12 @@ class Chatbot:
                 return str(e)
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
-    
-    
-    def send_media_message(self, recipient_number: str, media_url: str, text: str = None):
+
+    def send_media_message(
+            self,
+            recipient_number: str,
+            media_url: str,
+            text: str = None):
         client = Client(self.twilio_account_sid, self.twilio_auth_token)
         message_data = {
             "from": f"whatsapp:{self.twilio_number}",
@@ -230,7 +231,7 @@ class Chatbot:
             }
 
             # Save the updated subscribers to team56test.json
-            with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
+            with open(self.json_file, "w", encoding="utf-8") as f:  # TODO: locking mechanism
                 json.dump(self.subscribers, f, indent=4)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
@@ -356,11 +357,12 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    return self._push(text, sender_contact, media_urls)                
+                    return self._push(text, sender_contact, media_urls)
         # Send media messages, if any
         for media_url in media_urls:
             self.send_media_message(sender_contact, media_url)
         return ""  # return an empty string when the message is processed
+
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]

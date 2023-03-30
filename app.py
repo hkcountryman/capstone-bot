@@ -2,7 +2,7 @@
 
 This module handles the route to make requests to the bot.
 """
-from typing import Tuple, List
+from typing import List, Tuple
 
 from flask import Flask, Request, request
 
@@ -10,6 +10,7 @@ from chatbot import mr_botty
 
 app = Flask(__name__)
 """The server running the chatbot."""
+
 
 def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
     """Get an incoming message sent to the bot and its sender.
@@ -29,9 +30,10 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
         "From", type=str)  # type: ignore [assignment]
     sender_name: str = request.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
-    
-    media_urls = [request.values.get(f"MediaUrl{i}", type=str) for i in range(10) if request.values.get(f"MediaUrl{i}") is not None]
-    
+
+    media_urls = [request.values.get(f"MediaUrl{i}", type=str) for i in range(
+        10) if request.values.get(f"MediaUrl{i}") is not None]
+
     return (msg, sender_contact, sender_name, media_urls)
 
 
