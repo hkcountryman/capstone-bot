@@ -11,6 +11,8 @@ import json
 import os
 from types import SimpleNamespace
 from typing import Dict, TypedDict
+from twilio.rest import Client
+from typing import List
 
 import requests
 from twilio.rest import Client
@@ -110,12 +112,13 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def _push(self, text: str, sender: str) -> str:
-        """Push a translated message to one or more recipients.
+    def _push(self, text: str, sender: str, media_urls: List[str] = []) -> str:
+        """Push a translated message and media to one or more recipients.
 
         Arguments:
             text -- Contents of the message
             sender -- Sender's WhatsApp contact info
+            media_urls -- a list of media URLs to send, if any
 
         Returns:
             An empty string to the sender, or else an error message if the
@@ -137,7 +140,8 @@ class Chatbot:
                 msg = self.client.messages.create(
                     from_=f"whatsapp:{self.number}",
                     to=s,
-                    body=translated)
+                    body=translated,
+                    media_url=media_urls)  # Include media_urls in the message
                 print(msg.sid)
         return ""
 
@@ -223,17 +227,30 @@ class Chatbot:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
 
+    def send_media_message(self, recipient_number: str, media_url: str, text: str = None):
+        client = Client(self.twilio_account_sid, self.twilio_auth_token)
+        message_data = {
+            "from": f"whatsapp:{self.twilio_number}",
+            "to": f"whatsapp:{recipient_number}",
+            "media_url": media_url,
+        }
+        if text:
+            message_data["body"] = text
+        client.messages.create(**message_data)
+
     def process_msg(
             self,
             msg: str,
             sender_contact: str,
-            sender_name: str) -> str:
+            sender_name: str,
+            media_urls: List[str]) -> str:
         """Process a bot command.
 
         Arguments:
             msg -- the message sent to the bot
             sender_contact -- the WhatsApp contact info of the sender
             sender_name -- the WhatsApp profile name of the sender
+            media_urls -- a list of media URLs sent with the message, if any
 
         Returns:
             A string suitable for returning from a Flask route endpoint.
@@ -244,7 +261,14 @@ class Chatbot:
         except KeyError:
             return ""  # ignore; they aren't subscribed
 
-        word_1 = msg.split()[0].lower()
+        if not msg and not media_urls:
+            return "Please send a text or media message."
+
+        if msg:
+            word_1 = msg.split()[0].lower()
+        else:
+            word_1 = ""
+
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
@@ -280,8 +304,12 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    return self._push(text, sender_contact)
-        return ""
+                    return self._push(text, sender_contact, media_urls)
+
+        # Send media messages, if any
+        for media_url in media_urls:
+            self.send_media_message(sender_contact, media_url)
+        return ""  # return an empty string when the message is processed
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
