@@ -10,7 +10,7 @@ instance of such a chatbot for import by the Flask app.
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, List, TypedDict
+from typing import Dict, List, TypedDict, Optional
 
 import requests
 from twilio.rest import Client
@@ -117,7 +117,7 @@ class Chatbot:
             self,
             text: str,
             sender: str,
-            media_urls: List[str] = "") -> str:
+            media_urls: Optional[List[str]] = None) -> str:
         """Push a translated message and media to one or more recipients.
 
         Arguments:
