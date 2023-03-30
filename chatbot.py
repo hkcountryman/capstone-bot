@@ -356,8 +356,7 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    return self._push(text, sender_contact)
-
+                    return self._push(text, sender_contact, media_urls)                
         # Send media messages, if any
         for media_url in media_urls:
             self.send_media_message(sender_contact, media_url)
