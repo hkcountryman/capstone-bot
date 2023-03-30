@@ -277,7 +277,8 @@ class Chatbot:
                 return ""  # ignore invalid/unauthorized command
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
-                self._push(text, sender_contact)
+                return self._push(text, sender_contact, media_urls)
+
         else:
             match word_1:
                 case consts.TEST:  # test translate
