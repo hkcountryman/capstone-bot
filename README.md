@@ -110,6 +110,10 @@ python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
 ```
+Note: On a Windows system, run
+```
+\venv\Scripts\activate.bat
+```
 
 **Any time you add a dependency, it must be added to `requirements.txt` via**
 
@@ -241,6 +245,15 @@ The system must have the following environment variables set:
 - `TWILIO_AUTH_TOKEN`: [your Twilio account auth token]()
 - `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
 - `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
+
+#### JSON user file
+
+The super administrator must run a simple python script `setup.py` prior to starting the server. The script will set:
+
+- `Phone Number`: The super administrator's personal WhatsApp phone number (Note: Omit the +1)
+` 'Language`: The super administrator's preferred WhatsApp language
+
+The JSON file is encrypted via an AES 128-bit ["cipher"](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key. 
 
 ### Deploying
 
