@@ -2,7 +2,7 @@
 
 This module handles the route to make requests to the bot.
 """
-from typing import Tuple
+from typing import List, Tuple
 
 from flask import Flask, Request, request
 
@@ -12,25 +12,28 @@ app = Flask(__name__)
 """The server running the chatbot."""
 
 
-def get_incoming_msg(req: Request) -> Tuple[str, str, str]:
+def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
     """Get an incoming message sent to the bot and its sender.
 
     Arguments:
         req -- Flask Request object
 
     Returns:
-        The message contents from a POST request to the bot as well as the
-            sender contact info and name.
+        The message contents, sender contact info, sender name, and media URLs
+            from a POST request to the bot.
     """
     msg: str = req.values.get(
         "Body",
         default="Hello, world",
         type=str).strip()  # type: ignore [union-attr]
-    sender_contact: str = request.values.get(
+    sender_contact: str = req.values.get(
         "From", type=str)  # type: ignore [assignment]
-    sender_name: str = request.values.get(
+    sender_name: str = req.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
-    return (msg, sender_contact, sender_name)
+    media_urls = [req.values[k]
+                  for k in req.values.keys() if k.startswith("MediaUrl")]
+
+    return (msg, sender_contact, sender_name, media_urls)
 
 
 @app.route("/bot", methods=["POST"])
@@ -43,5 +46,10 @@ def bot() -> str:
     Returns:
         The bot's response.
     """
-    (msg, sender_contact, sender_name) = get_incoming_msg(request)
-    return mr_botty.process_msg(msg, sender_contact, sender_name)
+    (msg, sender_contact, sender_name, media_urls) = get_incoming_msg(request)
+
+    return mr_botty.process_msg(
+        msg,
+        sender_contact,
+        sender_name,
+        media_urls)
