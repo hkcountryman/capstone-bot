@@ -409,7 +409,11 @@ class Chatbot:
 
 
 class Timer:
-    """An asynchronous timer based on https://stackoverflow.com/a/45430833."""
+    """An asynchronous timer based on https://stackoverflow.com/a/45430833.
+
+    Methods:
+        cancel -- Cancels the timer
+    """
 
     def __init__(
             self,
@@ -492,8 +496,8 @@ class Poll:
             pass
             # TODO: Kevin, can you handle writing the JSON like this?
             # "polls": {
-            #       "<poll.uid>": {
-            #           "due": <self.due>
+            #       "<str(poll.uid)>": {
+            #           "due": <self.due>,
             #           "question": <poll.question>,
             #           "num_votes": <poll.num_votes>,
             #           "user_votes": <poll.user_votes>
