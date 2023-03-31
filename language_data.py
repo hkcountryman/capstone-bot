@@ -93,7 +93,8 @@ class LangData:
             corresponding LangEntry dictionaries
 
     Methods:
-        get_test_example -- get the /test error message for a given language code
+        get_test_example -- get the /test error message for a given language
+            code
         get_add_example -- get the /add error message for a given language code
     """
 

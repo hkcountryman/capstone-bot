@@ -57,6 +57,9 @@ class Chatbot:
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
         subscribers -- Dictionary containing the data loaded from the file
+        twilio_account_sid -- Account SID for the Twilio account
+        twilio_auth_token -- Twilio authorization token
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
         process_cmd -- Process a slash command and send a reply from the bot
@@ -78,7 +81,7 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json"):
+            json_file: str = "bot_subscribers/template.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -202,13 +205,13 @@ class Chatbot:
 
             # Check if the role is valid
             if new_role not in consts.VALID_ROLES:
-                return Chatbot.languages.get_add_rol_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
                     sender_lang)
 
             # Check if the language code is valid
             if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
                     sender_lang)
 
             new_contact_key = f"whatsapp:{new_contact}"
