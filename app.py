@@ -2,7 +2,7 @@
 
 This module handles the route to make requests to the bot.
 """
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from flask import Flask, Request, request
 
@@ -12,8 +12,7 @@ app = Flask(__name__)
 """The server running the chatbot."""
 
 
-def get_incoming_msg(
-        req: Request) -> Tuple[str, str, str, List[Optional[str]]]:
+def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
     """Get an incoming message sent to the bot and its sender.
 
     Arguments:
@@ -27,17 +26,12 @@ def get_incoming_msg(
         "Body",
         default="Hello, world",
         type=str).strip()  # type: ignore [union-attr]
-    sender_contact: str = request.values.get(
+    sender_contact: str = req.values.get(
         "From", type=str)  # type: ignore [assignment]
-    sender_name: str = request.values.get(
+    sender_name: str = req.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
-
-    media_urls = [
-        request.values.get(
-            f"MediaUrl{i}",
-            default=None,
-            type=str) for i in range(10)]
-    media_urls = [url for url in media_urls if url is not None]
+    media_urls = [req.values[k]
+                  for k in req.values.keys() if k.startswith("MediaUrl")]
 
     return (msg, sender_contact, sender_name, media_urls)
 
@@ -54,11 +48,8 @@ def bot() -> str:
     """
     (msg, sender_contact, sender_name, media_urls) = get_incoming_msg(request)
 
-    # Filter out None values from media_urls
-    filtered_media_urls = [url for url in media_urls if url is not None]
-
     return mr_botty.process_msg(
         msg,
         sender_contact,
         sender_name,
-        filtered_media_urls)
+        media_urls)

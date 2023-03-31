@@ -10,7 +10,7 @@ instance of such a chatbot for import by the Flask app.
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, TypedDict
 
 import requests
 from twilio.rest import Client
@@ -117,7 +117,7 @@ class Chatbot:
             self,
             text: str,
             sender: str,
-            media_urls: Optional[List[str]] = None) -> str:
+            media_urls: List[str]) -> str:
         """Push a translated message and media to one or more recipients.
 
         Arguments:
@@ -130,9 +130,6 @@ class Chatbot:
                 request to the LibreTranslate API times out or has some other
                 error.
         """
-        if media_urls is None:
-            media_urls = []
-
         translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
             if s != sender:
@@ -183,21 +180,6 @@ class Chatbot:
                 return str(e)
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
-
-    def send_media_message(
-            self,
-            recipient_number: str,
-            media_url: str,
-            text: str = ""):
-        client = Client(self.twilio_account_sid, self.twilio_auth_token)
-        message_data = {
-            "from": f"whatsapp:{self.twilio_number}",
-            "to": f"whatsapp:{recipient_number}",
-            "media_url": media_url,
-        }
-        if text:
-            message_data["body"] = text
-        client.messages.create(**message_data)
 
     def add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
@@ -328,13 +310,10 @@ class Chatbot:
         except KeyError:
             return ""  # ignore; they aren't subscribed
 
-        if not msg and not media_urls:
-            return "Please send a text or media message."
+        if not msg and len(media_urls) == 0:
+            return ""  # ignore; nothing to send
 
-        if msg:
-            word_1 = msg.split()[0].lower()
-        else:
-            word_1 = ""
+        word_1 = msg.split()[0].lower() if msg else ""
 
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
@@ -343,7 +322,7 @@ class Chatbot:
                 return ""  # ignore invalid/unauthorized command
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
-                self._push(text, sender_contact)
+                self._push(text, sender_contact, media_urls)
                 return ""  # say nothing to sender
         else:
             match word_1:
@@ -368,10 +347,6 @@ class Chatbot:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
                     return self._push(text, sender_contact, media_urls)
-        # Send media messages, if any
-        for media_url in media_urls:
-            self.send_media_message(sender_contact, media_url)
-        return ""  # return an empty string when the message is processed
 
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
