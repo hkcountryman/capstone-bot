@@ -16,7 +16,7 @@ import asyncio
 import datetime as dt
 import json
 from types import SimpleNamespace
-from typing import Any, Callable, Dict, List, Tuple, TypedDict
+from typing import Any, Callable, Dict, List, TypedDict
 from uuid import UUID, uuid4
 
 import requests
@@ -80,8 +80,11 @@ class Chatbot:
         subscribers -- Dictionary containing the data loaded from the file
         polls -- Dictionary of ongoing polls indexed by unique IDs and stored
             in the file
+        timers -- Collection of ongoing timer tasks
 
     Methods:
+        message -- Push a message to a single recipient
+        push -- Push a translated message and/or media to one or more recipients
         process_cmd -- Process a slash command and send a reply from the bot
     """
     commands = [
@@ -119,22 +122,28 @@ class Chatbot:
         self.number = number
         self.json_file = json_file
         self.polls: Dict[UUID, Poll] = {}
+        self.timers = set()
         with open(json_file, encoding="utf-8") as file:
             # TODO: fix self.subscribers to be json.load(file)["users"]
             self.subscribers: Dict[str, SubscribersInfo] = json.load(file)
             # TODO: fix self.polls to be json.load(file)["polls"]
             polls: Dict[str, PollsInfo] = json.load(file)
-            for (uid, data) in polls.items():
-                # TODO: may have to do something that isn't __init__ to account
-                # for this; see
-                # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
-                new_poll(self,
-                         data["question"],
-                         [opt for opt in data["num_votes"].keys()],
-                         data["due"],
-                         data["num_votes"],
-                         data["user_votes"],
-                         UUID(uid))
+            for (uid, poll) in polls.items():
+                # Add a Poll object to self.polls for each entry in JSON:
+                new_poll = Poll(self,
+                                poll["due"],
+                                poll["question"],
+                                list(poll["num_votes"].keys()),
+                                poll["num_votes"],
+                                poll["user_votes"],
+                                UUID(uid))
+                self.polls[UUID(uid)] = new_poll
+                # Schedule a timer for each added Poll object:
+                # NOTE: Since these were already in the JSON, they won't raise
+                # a ValueError because they were already validated
+                task = asyncio.create_task(new_poll.start_timer())
+                self.timers.add(task)
+                task.add_done_callback(self.timers.discard)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -171,7 +180,7 @@ class Chatbot:
             text: str,
             sender: str,
             media_urls: List[str]) -> str:
-        """Push a translated message and media to one or more recipients.
+        """Push a translated message and/or media to one or more recipients.
 
         Arguments:
             text -- Contents of the message
@@ -229,7 +238,7 @@ class Chatbot:
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
 
-    def add_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
 
         Arguments:
@@ -280,7 +289,7 @@ class Chatbot:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
 
-    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _remove_subscriber(self, msg: str, sender_contact: str) -> str:
         """
         Remove a subscriber from the dictionary and save the updated dictionary.
 
@@ -379,19 +388,18 @@ class Chatbot:
                         self._test_translate(
                             msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
-                    # Call the add_subscriber method and return its response
                     return self._reply(
-                        self.add_subscriber(
+                        self._add_subscriber(
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
-                    subscribers = json.dumps(self.subscribers, indent=2)
-                    return self._reply(f"List of subscribers:\n{subscribers}")
+                    return self._reply(json.dumps(self.subscribers, indent=2))
                 case consts.POLL:  # start a new poll
-                    # TODO:
+                    # TODO: make Poll and start Timer, make sure to handle
+                    # ValueError and warn creator.
                     return self._reply("")
                 case consts.REMOVE:  # remove user from subscribers
                     return self._reply(
-                        self.remove_subscriber(
+                        self._remove_subscriber(
                             msg, sender_contact))
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
@@ -401,19 +409,7 @@ class Chatbot:
 
 
 class Timer:
-    """An asynchronous timer.
-
-    Based on https://stackoverflow.com/a/45430833.
-
-    Instance variables:
-        _timeout -- Time in seconds before timer goes off
-        _callback -- Function to execute when timer goes off
-        _cb_args -- List of arguments to pass to _callback
-        _task -- Task this timer accomplishes
-
-    Methods:
-        _job -- Wait for the timer to expire, then execute _callback
-    """
+    """An asynchronous timer based on https://stackoverflow.com/a/45430833."""
 
     def __init__(
             self,
@@ -437,6 +433,10 @@ class Timer:
         await asyncio.sleep(self._timeout)
         await self._callback(*self._cb_args)
 
+    def cancel(self):
+        """Cancel the timer."""
+        self._task.cancel()
+
 
 class Poll:
     """An object to represent a poll in a group chat.
@@ -444,14 +444,21 @@ class Poll:
     Instance variables:
         uid -- Unique ID for this poll
         bot -- Chatbot this poll belongs to
+        due -- String description of a timestamp or time period
         question -- Question to ask users
         options -- All options users can pick from
         num_votes -- Options and their corresponding number of votes
         user_votes -- Users and their corresponding chosen options
+
+    Methods:
+        start_timer -- Asynchronous call after creating a new Poll object to
+            start its timer
+        vote -- Process an incoming vote from a subscriber
     """
 
     def __init__(self,
                  bot: Chatbot,
+                 due: str,
                  question: str,
                  options: List[str],
                  num_votes: Dict[str, int] | None = None,
@@ -461,6 +468,7 @@ class Poll:
 
         Arguments:
             bot -- Chatbot this poll belongs to
+            due -- String description of a timestamp or time period
             question -- Question to ask users
             options -- All options users can pick from
 
@@ -474,11 +482,80 @@ class Poll:
         """
         self.uid = uuid4() if not uid else uid
         self.bot = bot
+        self.due = due
         self.question = question
         self.options = options
         self.num_votes = {
             opt: 0 for opt in options} if not num_votes else num_votes
         self.user_votes = {} if not user_votes else user_votes
+        if uid is None:  # creating a new poll; must write to JSON
+            pass
+            # TODO: Kevin, can you handle writing the JSON like this?
+            # "polls": {
+            #       "<poll.uid>": {
+            #           "due": <self.due>
+            #           "question": <poll.question>,
+            #           "num_votes": <poll.num_votes>,
+            #           "user_votes": <poll.user_votes>
+            #       }
+            # }
+
+    async def start_timer(self):
+        """Starts the asynchronous timer for this poll.
+
+        Raises:
+            ValueError: If parsing fails
+        """
+        try:
+            seconds = self._calc_timer()
+        except ValueError as e:  # parsing failed
+            # Remove this poll from JSON file:
+            # TODO: Kevin?
+            # Remove reference to this Poll object from its Chatbot:
+            self.bot.polls.pop(self.uid)
+            raise ValueError from e
+        Timer(seconds, self._publish_results, [self])
+
+    def _calc_timer(self) -> float:
+        """Calculates the duration of a timer.
+
+        Returns:
+            A float value representing the seconds into the future when the
+                timer will end and a datetime to store in the JSON file.
+
+        Raises:
+            ValueError: If due cannot be parsed
+        """
+        now = dt.datetime.now(dt.UTC)
+        if len(self.due.split()) == 2:  # datetimestamp; may raise ValueError
+            due_date = dt.datetime.strptime(self.due, "%Y-%m-%d %H:%M")
+            delta = due_date - now
+        elif self.due[0] != "+":  # just timestamp; may raise ValueError
+            due_date = dt.datetime.strptime(self.due, "%H:%M")
+            delta = due_date - now
+        elif self.due[0] == "+":  # time period
+            hrs_mins = self.due[1:].split(":")
+            if len(hrs_mins) != 2 or not hrs_mins[0].isdigit(
+            ) or not hrs_mins[1].isdigit():
+                raise ValueError
+            delta = dt.timedelta(
+                hours=int(hrs_mins[0]),
+                minutes=int(hrs_mins[1]))
+            due_date = now + delta
+        else:
+            raise ValueError  # parsing failed
+        due_date = due_date.replace(tzinfo=dt.UTC)
+        if due_date <= now:
+            raise ValueError  # due in past
+        else:
+            return delta.total_seconds()
+
+    async def _publish_results(self):
+        """Send all subscribers the results of this poll and delete it."""
+        results = ""  # TODO:
+        self.bot.push(results, f"whatsapp:{self.bot.number}", [])
+        self.bot.polls.pop(self.uid)  # remove from Chatbot object
+        # TODO: Kevin: remove from self.bot.json_file
 
     def vote(self, user: str, choice_num: int):
         """Apply one user's vote, changing it if they already voted.
@@ -497,85 +574,3 @@ class Poll:
             self.num_votes[current_choice] -= 1  # remove previous vote
         self.user_votes[user] = option  # set user's choice
         self.num_votes[option] += 1  # add their vote
-
-    def publish_results(self):
-        """Send all subscribers the results of this poll and delete it."""
-        results = ""  # TODO:
-        self.bot.push(results, f"whatsapp:{self.bot.number}", [])
-        self.bot.polls.pop(self.uid)  # remove from Chatbot object
-        # TODO: remove from self.bot.json_file
-
-
-async def new_poll(creator: str,
-                   bot: Chatbot,
-                   question: str,
-                   options: List[str],
-                   due: str,
-                   num_votes: Dict[str, int] | None = None,
-                   user_votes: Dict[str, str] | None = None,
-                   uid: UUID | None = None):
-    try:
-        (seconds, datetime) = _calc_timer(due)
-    except ValueError:  # parsing failed
-        bot.message(creator, "", [])
-        return
-    poll = Poll(bot, question, options, num_votes, user_votes, uid)
-    bot.polls[poll.uid] = poll
-    # TODO: add poll to Chatbot object's polls
-    # TODO: Kevin, can you handle writing the JSON like this?
-    # "polls": {
-    #       "<poll.uid>": {
-    #           "due": <datetime.strftime("%Y-%m-%d %H:%M")>
-    #           "question": <poll.question>,
-    #           "num_votes": <poll.num_votes>,
-    #           "user_votes": <poll.user_votes>
-    #       }
-    # }
-    Timer(seconds, _end_timer, [poll])
-
-
-def _calc_timer(due: str) -> Tuple[float, dt.datetime]:
-    """Calculates the duration of a timer.
-
-    Arguments:
-        due -- a string with a datestamp (formatted as YYYY-MM-DD HH:MM and
-            assuming a 24-hour clock and UTC timezone), a timestamp
-            (formatted as HH:MM and assuming a 24-hour clock, UTC timezone,
-            and that the associated date is today), or a time period
-            (formatted as +HH:MM)
-
-    Returns:
-        A float value representing the seconds into the future when the timer
-            will end and a datetime to store in the JSON file.
-
-    Raises:
-        ValueError: If due cannot be parsed
-    """
-    now = dt.datetime.now(dt.UTC)
-    if len(due.split()) == 2:  # datetimestamp; may raise ValueError
-        due_date = dt.datetime.strptime(due, "%Y-%m-%d %H:%M")
-        delta = due_date - now
-    elif due[0] != "+":  # just timestamp; may raise ValueError
-        due_date = dt.datetime.strptime(due, "%H:%M")
-        delta = due_date - now
-    elif due[0] == "+":  # time period
-        hrs_mins = due[1:].split(":")
-        if len(hrs_mins) != 2 or not hrs_mins[0].isdigit(
-        ) or not hrs_mins[1].isdigit():
-            raise ValueError()
-        delta = dt.timedelta(
-            hours=int(hrs_mins[0]),
-            minutes=int(hrs_mins[1]))
-        due_date = now + delta
-    else:
-        raise ValueError()  # parsing failed
-    due_date = due_date.replace(tzinfo=dt.UTC)
-    if due_date <= now:
-        raise ValueError()  # due in past
-    else:
-        return (delta.total_seconds(), due_date)
-
-
-async def _end_timer(poll: Poll):
-    """Send all subscribers the results of a poll after the timer expires."""
-    poll.publish_results()  # TODO: should this be awaited??
