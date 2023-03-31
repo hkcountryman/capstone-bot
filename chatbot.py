@@ -10,7 +10,7 @@ instance of such a chatbot for import by the Flask app.
 import json
 import os
 from types import SimpleNamespace
-from typing import Dict, List, TypedDict, Optional
+from typing import Dict, List, Optional, TypedDict
 
 import requests
 from twilio.rest import Client
@@ -296,7 +296,7 @@ class Chatbot:
                 del self.subscribers[user_contact_key]
 
                 # Save the updated subscribers to team56test.json
-                with open(self.json_file, 'w', encoding="utf-8") as f:  # TODO: locking mechanism
+                with open(self.json_file, "w", encoding="utf-8") as f:  # TODO: locking mechanism
                     json.dump(self.subscribers, f, indent=4)
 
                 return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]

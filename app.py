@@ -2,7 +2,7 @@
 
 This module handles the route to make requests to the bot.
 """
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 from flask import Flask, Request, request
 
