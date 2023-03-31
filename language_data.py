@@ -47,6 +47,7 @@ err_msgs.remove_example = "/remove +12345678900"  # /remove example
 err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
+err_msgs.poll = "Failed to create poll. "  # TODO: uhhhhhhh
 
 # Strings for success messages
 success = SimpleNamespace()

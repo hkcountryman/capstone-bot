@@ -2,11 +2,12 @@
 
 This module handles the route to make requests to the bot.
 """
+import os
 from typing import List, Tuple
 
 from flask import Flask, Request, request
 
-from chatbot import mr_botty
+from chatbot import Chatbot
 
 app = Flask(__name__)
 """The server running the chatbot."""
@@ -34,6 +35,20 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
                   for k in req.values.keys() if k.startswith("MediaUrl")]
 
     return (msg, sender_contact, sender_name, media_urls)
+
+
+TWILIO_ACCOUNT_SID: str = os.getenv(
+    "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
+TWILIO_AUTH_TOKEN: str = os.getenv(
+    "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
+TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
+SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+mr_botty = Chatbot(
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_NUMBER,
+    SUBSCRIBER_FILE)
+"""Global Chatbot object, of which there could theoretically be many."""
 
 
 @app.route("/bot", methods=["POST"])
