@@ -6,7 +6,7 @@
 
 ### Requirements
 
-- Python 3.10+ running on Linux
+- Python 3.11+ running on Linux
 - [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate): public mirrors and/or your own deployed server
 - A phone with an active number and WhatsApp installed
 - A [free Twilio account](https://www.twilio.com/) (set up the WhatsApp Sandbox according to the instructions in the aforementioned tutorial)
@@ -197,7 +197,7 @@ Now you can try texting the number you texted earlier for the Sandbox.
 
 ### Requirements
 
-- Python 3.10+ running on Linux
+- Python 3.11+ running on Linux
 - [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate): public mirrors and/or your own deployed server
 - An [upgraded Twilio account](https://support.twilio.com/hc/en-us/articles/223183208-Upgrading-to-a-paid-Twilio-Account) with a [WhatsApp Sender](https://www.twilio.com/docs/whatsapp/self-sign-up)
 - Git
