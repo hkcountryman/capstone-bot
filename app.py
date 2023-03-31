@@ -30,8 +30,9 @@ def get_incoming_msg(req: Request) -> Tuple[str, str, str, List[str]]:
         "From", type=str)  # type: ignore [assignment]
     sender_name: str = req.values.get(
         "ProfileName", type=str)  # type: ignore [assignment]
-    media_urls = [req.values[k]
-                  for k in req.values.keys() if k.startswith("MediaUrl")]
+
+    num_media = int(req.values.get("NumMedia", 0))
+    media_urls = [req.values.get(f"MediaUrl{i}") for i in range(num_media)]
 
     return (msg, sender_contact, sender_name, media_urls)
 
