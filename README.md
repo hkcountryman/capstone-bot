@@ -203,6 +203,8 @@ Now you can try texting the number you texted earlier for the Sandbox.
 - Git
 - [nginx](https://nginx.org/en/docs/install.html)
 
+[Estimate your WhatsApp Business API cost](https://www.twilio.com/en-us/whatsapp/pricing).
+
 ### Setup
 
 Begin by cloning the repository and entering its directory:
@@ -239,7 +241,7 @@ The system must have the following environment variables set:
 - `TWILIO_NUMBER`: the Twilio phone number for your WhatsApp Sender with no punctuation except for the "+" before the country code.
 - `TWILIO_ACCOUNT_SID`: [your Twilio account SID](https://www.twilio.com/docs/whatsapp/key-concepts#twilio-account-account-sid-subaccount-sid-and-project-sid)
 - `TWILIO_AUTH_TOKEN`: [your Twilio account auth token]()
-- `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
+- `LIBRETRANSLATE`: URL(s) for a locally deployed LibreTranslate server and/or LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)).
 - `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
 
 ### Deploying
