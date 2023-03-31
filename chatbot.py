@@ -80,7 +80,7 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
-            key_file: str = "bot_subscribers/key.key"):
+            key_file: str = "json/key.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -98,14 +98,9 @@ class Chatbot:
         self.json_file = json_file
         with open(json_file, 'rb') as file:
             encrypted_data = file.read()
-        # Create a key or Retrieve a key if file already exists
-        if not os.path.isfile(key_file):
-            self.key = Fernet.generate_key()
-            with open(key_file, 'xb') as file:
-                file.write(self.key)
-        else:
-            with open(key_file, 'rb') as file:
-                self.key = file.read()
+        # Retrieve encryption key
+        with open(key_file, 'rb') as file:
+            self.key = file.read()
         f = Fernet(self.key)
         unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
         self.subscribers: Dict[str,
@@ -367,7 +362,7 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
-KEY_FILE: str = "bot_subscribers/key.key"
+KEY_FILE: str = "json/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
