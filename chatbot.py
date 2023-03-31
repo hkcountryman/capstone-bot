@@ -11,7 +11,7 @@ import json
 from cryptography.fernet import Fernet
 import os
 from types import SimpleNamespace
-from typing import Dict, TypedDict
+from typing import Dict, List, TypedDict
 
 import requests
 from twilio.rest import Client
@@ -58,6 +58,9 @@ class Chatbot:
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
         subscribers -- Dictionary containing the data loaded from the file
+        twilio_account_sid -- Account SID for the Twilio account
+        twilio_auth_token -- Twilio authorization token
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
         process_cmd -- Process a slash command and send a reply from the bot
@@ -96,10 +99,15 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
-        with open(json_file, 'rb') as file:
+        self.key_file = key_file
+        self.twilio_account_sid = account_sid
+        self.twilio_auth_token = auth_token
+        self.twilio_number = number
+
+        with open(self.json_file, 'rb') as file:
             encrypted_data = file.read()
         # Retrieve encryption key
-        with open(key_file, 'rb') as file:
+        with open(self.key_file, 'rb') as file:
             self.key = file.read()
         f = Fernet(self.key)
         unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
@@ -120,12 +128,17 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def _push(self, text: str, sender: str) -> str:
-        """Push a translated message to one or more recipients.
+    def _push(
+            self,
+            text: str,
+            sender: str,
+            media_urls: List[str]) -> str:
+        """Push a translated message and media to one or more recipients.
 
         Arguments:
             text -- Contents of the message
             sender -- Sender's WhatsApp contact info
+            media_urls -- a list of media URLs to send, if any
 
         Returns:
             An empty string to the sender, or else an error message if the
@@ -147,7 +160,8 @@ class Chatbot:
                 msg = self.client.messages.create(
                     from_=f"whatsapp:{self.number}",
                     to=s,
-                    body=translated)
+                    body=translated,
+                    media_url=media_urls)  # Include media_urls in the message
                 print(msg.sid)
         return ""
 
@@ -203,13 +217,13 @@ class Chatbot:
 
             # Check if the role is valid
             if new_role not in consts.VALID_ROLES:
-                return Chatbot.languages.get_add_rol_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
                     sender_lang)
 
             # Check if the language code is valid
             if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
                     sender_lang)
 
             new_contact_key = f"whatsapp:{new_contact}"
@@ -304,13 +318,15 @@ class Chatbot:
             self,
             msg: str,
             sender_contact: str,
-            sender_name: str) -> str:
+            sender_name: str,
+            media_urls: List[str]) -> str:
         """Process a bot command.
 
         Arguments:
             msg -- the message sent to the bot
             sender_contact -- the WhatsApp contact info of the sender
             sender_name -- the WhatsApp profile name of the sender
+            media_urls -- a list of media URLs sent with the message, if any
 
         Returns:
             A string suitable for returning from a Flask route endpoint.
@@ -321,7 +337,11 @@ class Chatbot:
         except KeyError:
             return ""  # ignore; they aren't subscribed
 
-        word_1 = msg.split()[0].lower()
+        if not msg and len(media_urls) == 0:
+            return ""  # ignore; nothing to send
+
+        word_1 = msg.split()[0].lower() if msg else ""
+
         if role == consts.USER:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
@@ -329,7 +349,7 @@ class Chatbot:
                 return ""  # ignore invalid/unauthorized command
             else:  # just send a message
                 text = sender_name + " says:\n" + msg
-                self._push(text, sender_contact)
+                self._push(text, sender_contact, media_urls)
                 return ""  # say nothing to sender
         else:
             match word_1:
@@ -353,7 +373,7 @@ class Chatbot:
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
                     text = sender_name + " says:\n" + msg
-                    return self._push(text, sender_contact)
+                    return self._push(text, sender_contact, media_urls)
 
 
 TWILIO_ACCOUNT_SID: str = os.getenv(
