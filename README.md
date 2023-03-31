@@ -101,6 +101,16 @@ Notice that some of the values of the environment variables are left up to you t
 
 Now you can run the server from inside the IDE.
 
+#### JSON user file
+
+The superuser must run the setup script prior to starting the server:
+
+```
+./setup.py [JSON file name]
+```
+
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+
 #### Dependencies
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
@@ -248,12 +258,13 @@ The system must have the following environment variables set:
 
 #### JSON user file
 
-The super administrator must run a simple python script `setup.py` prior to starting the server. The script will set:
+The superuser must run the setup script prior to starting the server:
 
-- `Phone Number`: The super administrator's personal WhatsApp phone number (Note: Omit the +1)
-` 'Language`: The super administrator's preferred WhatsApp language
+```
+./setup.py [JSON file name]
+```
 
-The JSON file is encrypted via an AES 128-bit ["cipher"](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key. 
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
 ### Deploying
 
