@@ -261,6 +261,11 @@ class Chatbot:
             with open(self.json_file, 'wb') as file:
                 file.write(encrypted_data)
 
+            # Copy data to backup file
+            with open(self.json_file, 'rb') as fileone, open(self.backup_file, 'wb') as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
         else:
@@ -321,6 +326,11 @@ class Chatbot:
             encrypted_data = f.encrypt(subscribers_list_byte)
             with open(self.json_file, 'wb') as file:
                 file.write(encrypted_data)
+
+            # Copy data to backup file
+            with open(self.json_file, 'rb') as fileone, open(self.backup_file, 'wb') as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
 
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                 sender_lang)
