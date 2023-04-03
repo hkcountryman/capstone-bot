@@ -93,6 +93,7 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            backup_file -- Path to a JSON file containing backup data for the above JSON file
             key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
@@ -118,7 +119,9 @@ class Chatbot:
             self.subscribers: Dict[str, SubscribersInfo] = json.loads(
                 unencrypted_data)
         except BaseException:
-            with open(self.backup_file, "rb") as file:
+            # TODO: Print message to super administrator that original file is
+            # corrupted...recent data may not have been saved.
+            with open(self.backup_file, 'rb') as file:
                 backup_encrypted_data = file.read()
             backup_unencrypted_data = f.decrypt(
                 backup_encrypted_data).decode("utf-8")
@@ -393,11 +396,13 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+BACKUP_FILE: str = "bot_subscribers/backup.json"
 KEY_FILE: str = "json/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
     SUBSCRIBER_FILE,
+    BACKUP_FILE,
     KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""

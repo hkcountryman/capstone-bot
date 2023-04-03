@@ -35,3 +35,5 @@ f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
 with open("bot_subscribers/team56test.json", 'xb') as file:
     file.write(encrypted_data)
+with open("bot_subscribers/backup.json", 'xb') as file:
+    file.write(encrypted_data)
