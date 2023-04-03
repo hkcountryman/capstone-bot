@@ -57,6 +57,9 @@ class Chatbot:
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
         subscribers -- Dictionary containing the data loaded from the file
+        twilio_account_sid -- Account SID for the Twilio account
+        twilio_auth_token -- Twilio authorization token
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
         process_cmd -- Process a slash command and send a reply from the bot
@@ -78,7 +81,7 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json"):
+            json_file: str = "bot_subscribers/template.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -192,6 +195,7 @@ class Chatbot:
             A string suitable for returning from a Flask route endpoint.
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
+        sender_role = self.subscribers[sender_contact]["role"]
 
         # Split the message into parts
         parts = msg.split()
@@ -200,15 +204,19 @@ class Chatbot:
         if len(parts) == 4:
             new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
 
+            # Check if the sender has the authority to add the specified role
+            if sender_role == consts.ADMIN and new_role == consts.SUPER:
+                return ""
+
             # Check if the role is valid
             if new_role not in consts.VALID_ROLES:
-                return Chatbot.languages.get_add_rol_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
                     sender_lang)
 
             # Check if the language code is valid
             if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_add_lng_err(  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
                     sender_lang)
 
             new_contact_key = f"whatsapp:{new_contact}"
@@ -258,9 +266,7 @@ class Chatbot:
             user_contact_key = f"whatsapp:{user_contact}"
 
             # Prevent sender from removing themselves
-            # sender_contact = 2345678900 and user_contact = +12345678900
-            # TODO: Need a way to fix this.
-            if sender_contact == user_contact:
+            if user_contact in sender_contact:
                 return Chatbot.languages.get_remove_self_err(  # type: ignore [union-attr]
                     sender_lang)
 
