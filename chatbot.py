@@ -83,6 +83,7 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
+            backup_file: str = "bot_subscribers/backup.json",
             key_file: str = "json/key.key"):
         """Create the ChatBot object and populate class members as needed.
 
@@ -99,6 +100,7 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
+        self.backup_file = backup_file
         self.key_file = key_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
@@ -110,9 +112,18 @@ class Chatbot:
         with open(self.key_file, 'rb') as file:
             self.key = file.read()
         f = Fernet(self.key)
-        unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
-        self.subscribers: Dict[str,
-                               SubscribersInfo] = json.loads(unencrypted_data)
+        # Handle corrupted file
+        try:
+            unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
+            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
+                unencrypted_data)
+        except BaseException:
+            with open(self.backup_file, "rb") as file:
+                backup_encrypted_data = file.read()
+            backup_unencrypted_data = f.decrypt(
+                backup_encrypted_data).decode("utf-8")
+            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
+                backup_unencrypted_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
