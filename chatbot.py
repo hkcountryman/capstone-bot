@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Dict, List, TypedDict
 
 import requests
+from cryptography.fernet import Fernet
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -81,7 +82,8 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/template.json"):
+            json_file: str = "bot_subscribers/team56test.json",
+            key_file: str = "json/key.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -90,17 +92,27 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
+        self.key_file = key_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
-        with open(json_file, encoding="utf-8") as file:
-            self.subscribers: Dict[str, SubscribersInfo] = json.load(file)
+
+        with open(self.json_file, 'rb') as file:
+            encrypted_data = file.read()
+        # Retrieve encryption key
+        with open(self.key_file, 'rb') as file:
+            self.key = file.read()
+        f = Fernet(self.key)
+        unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
+        self.subscribers: Dict[str,
+                               SubscribersInfo] = json.loads(unencrypted_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -226,8 +238,14 @@ class Chatbot:
             }
 
             # Save the updated subscribers to team56test.json
-            with open(self.json_file, "w", encoding="utf-8") as f:  # TODO: locking mechanism
-                json.dump(self.subscribers, f, indent=4)
+            # Convert the dictionary of subscribers to a formatted JSON string
+            subscribers_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            subscribers_list_byte = subscribers_list.encode('utf-8')
+            f = Fernet(self.key)
+            encrypted_data = f.encrypt(subscribers_list_byte)
+            with open(self.json_file, 'wb') as file:
+                file.write(encrypted_data)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
@@ -280,12 +298,18 @@ class Chatbot:
             else:
                 del self.subscribers[user_contact_key]
 
-                # Save the updated subscribers to team56test.json
-                with open(self.json_file, "w", encoding="utf-8") as f:  # TODO: locking mechanism
-                    json.dump(self.subscribers, f, indent=4)
+            # Save the updated subscribers to team56test.json
+            # Convert the dictionary of subscribers to a formatted JSON string
+            subscribers_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            subscribers_list_byte = subscribers_list.encode('utf-8')
+            f = Fernet(self.key)
+            encrypted_data = f.encrypt(subscribers_list_byte)
+            with open(self.json_file, 'wb') as file:
+                file.write(encrypted_data)
 
-                return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
-                    sender_lang)
+            return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
+                sender_lang)
         else:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
@@ -358,9 +382,11 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+KEY_FILE: str = "json/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
-    SUBSCRIBER_FILE)
+    SUBSCRIBER_FILE,
+    KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""

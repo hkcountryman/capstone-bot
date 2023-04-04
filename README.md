@@ -101,6 +101,16 @@ Notice that some of the values of the environment variables are left up to you t
 
 Now you can run the server from inside the IDE.
 
+#### JSON user file
+
+The superuser must run the setup script prior to starting the server:
+
+```
+./setup.py [JSON file name]
+```
+
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+
 #### Dependencies
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
@@ -109,6 +119,10 @@ You will need to [create a virtual environment](https://docs.python.org/3/tutori
 python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
+```
+Note: On a Windows system, run
+```
+\venv\Scripts\activate.bat
 ```
 
 **Any time you add a dependency, it must be added to `requirements.txt` via**
@@ -241,6 +255,16 @@ The system must have the following environment variables set:
 - `TWILIO_AUTH_TOKEN`: [your Twilio account auth token]()
 - `LIBRETRANSLATE`: URL(s) for LibreTranslate API mirrors, separated by spaces if you have more than one. These can be self-hosted (see [the instructions here](https://github.com/LibreTranslate/LibreTranslate#install-and-run)) or they can be public servers (see [the list of mirrors](https://github.com/LibreTranslate/LibreTranslate#mirrors)). For development, "https://libretranslate.com/" is fine to use, but if you intend to use it in production the developers ask that you purchase an API key. The other mirrors or a self-hosted server do not require an API key.
 - `TRANSLATION_TIMEOUT`: optional; the (integer) seconds for a translation request to time out. If using the public LibreTranslate mirrors, we recommend 10.
+
+#### JSON user file
+
+The superuser must run the setup script prior to starting the server:
+
+```
+./setup.py [JSON file name]
+```
+
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
 ### Deploying
 
