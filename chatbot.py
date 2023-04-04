@@ -8,12 +8,12 @@ instance of such a chatbot for import by the Flask app.
 """
 
 import json
-from cryptography.fernet import Fernet
 import os
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
 
 import requests
+from cryptography.fernet import Fernet
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 

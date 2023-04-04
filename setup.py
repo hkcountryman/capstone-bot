@@ -12,8 +12,12 @@ from cryptography.fernet import Fernet  # type: ignore [import]
 
 # Term color codes
 RED = "\033[1;31m"
+GREEN = "\033[1;32m"
 BOLD = "\033[;1m"
 RESET = "\033[0;0m"
+
+# File name
+JSON_FILE = "team56test.json"
 
 
 def usage():
@@ -24,15 +28,6 @@ def usage():
     sys.stdout.write(RESET)
     print(" [JSON file name]")
 
-
-# Get JSON file name
-try:
-    file_name = sys.argv[1]
-except IndexError:
-    usage()
-    sys.exit(1)
-if not file_name.endswith(".json"):
-    file_name = file_name + ".json"
 
 print("Setting up user data file...\n")
 
@@ -84,12 +79,15 @@ user_list_byte = user_list.encode("utf-8")
 f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
 try:
-    with open(f"bot_subscribers/{file_name}", "xb") as file:
+    with open(f"bot_subscribers/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
+    sys.stdout.write(BOLD + GREEN)
+    print(f"\nbot_subscribers/{JSON_FILE} created.")
+    sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under bot_subscribers/{file_name} already exists. " +
+        f"\nA file under bot_subscribers/{JSON_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
