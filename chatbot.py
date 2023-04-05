@@ -33,6 +33,8 @@ consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
 consts.VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 
+pm_char = "@"
+
 
 class SubscribersInfo(TypedDict):
     """A TypedDict to describe a subscriber.
@@ -161,8 +163,41 @@ class Chatbot:
                     from_=f"whatsapp:{self.number}",
                     to=s,
                     body=translated,
-                    media_url=media_urls)  # Include media_urls in the message
+                    media_url=media_urls)
                 print(msg.sid)
+        return ""
+
+    def _query(
+            self,
+            msg: str,
+            sender: str,
+            recipient: str,
+            media_urls: List[str]) -> str:
+        """Send a private message to a single recipient.
+
+        Arguments:
+            msg -- message contents
+            sender -- sender name
+            recipient -- recipient WhatsApp contact info
+            media_urls -- any attached media URLs from Twilio's CDN
+
+        Returns:
+            An empty string to the sender, or else an error message if the
+                request to the LibreTranslate API times out or has some other
+                error.
+        """
+        text = f"Private message from {sender}:\n{msg}"
+        try:
+            translated = translate_to(
+                text, self.subscribers[recipient]["lang"])
+        except (TimeoutError, requests.HTTPError) as e:
+            return str(e)
+        pm = self.client.messages.create(
+            from_=f"whatsapp:{self.number}",
+            to=recipient,
+            body=translated,
+            media_url=media_urls)
+        print(pm.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
@@ -342,7 +377,16 @@ class Chatbot:
 
         word_1 = msg.split()[0].lower() if msg else ""
 
-        if role == consts.USER:
+        if word_1[0:1] == pm_char:  # attempting to PM somebody
+            # TODO: we either need to give everyone user names or use numbers
+            pm_name = word_1[1:]  # TODO: get name, contact, whatever we need
+            return self._reply(
+                self._query(
+                    " ".join(msg.split()[1:]),
+                    sender_name,  # TODO: may need to do contact or something
+                    pm_name,
+                    media_urls))
+        elif role == consts.USER:  # otherwise, start checking role
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
             elif word_1[0:1] == "/" and len(word_1) > 1:
@@ -351,7 +395,7 @@ class Chatbot:
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact, media_urls)
                 return ""  # say nothing to sender
-        else:
+        else:  # admin or superuser
             match word_1:
                 case consts.TEST:  # test translate
                     return self._reply(
