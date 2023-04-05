@@ -207,6 +207,7 @@ class Chatbot:
             A string suitable for returning from a Flask route endpoint.
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
+        sender_role = self.subscribers[sender_contact]["role"]
 
         # Split the message into parts
         parts = msg.split()
@@ -214,6 +215,10 @@ class Chatbot:
         # Check if there are enough arguments
         if len(parts) == 4:
             new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
+
+            # Check if the sender has the authority to add the specified role
+            if sender_role == consts.ADMIN and new_role == consts.SUPER:
+                return ""
 
             # Check if the role is valid
             if new_role not in consts.VALID_ROLES:
@@ -279,9 +284,7 @@ class Chatbot:
             user_contact_key = f"whatsapp:{user_contact}"
 
             # Prevent sender from removing themselves
-            # sender_contact = 2345678900 and user_contact = +12345678900
-            # TODO: Need a way to fix this.
-            if sender_contact == user_contact:
+            if user_contact in sender_contact:
                 return Chatbot.languages.get_remove_self_err(  # type: ignore [union-attr]
                     sender_lang)
 
