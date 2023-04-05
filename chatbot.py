@@ -41,8 +41,8 @@ class SubscribersInfo(TypedDict):
     keys to which are to be strings of WhatsApp contact information of the form
     "whatsapp:<phone number with country code>".
     """
-    lang: str  # user's preferred language code
-    role: str  # user's privilege level, "user", "admin", or "super"
+    lang: str  # user"s preferred language code
+    role: str  # user"s privilege level, "user", "admin", or "super"
 
 
 class Chatbot:
@@ -60,7 +60,7 @@ class Chatbot:
         subscribers -- Dictionary containing the data loaded from the file
         twilio_account_sid -- Account SID for the Twilio account
         twilio_auth_token -- Twilio authorization token
-        twilio_number -- Bot's registered Twilio number
+        twilio_number -- Bot"s registered Twilio number
 
     Methods:
         process_cmd -- Process a slash command and send a reply from the bot
@@ -104,13 +104,13 @@ class Chatbot:
         self.twilio_auth_token = auth_token
         self.twilio_number = number
 
-        with open(self.json_file, 'rb') as file:
+        with open(self.json_file, "rb") as file:
             encrypted_data = file.read()
         # Retrieve encryption key
-        with open(self.key_file, 'rb') as file:
+        with open(self.key_file, "rb") as file:
             self.key = file.read()
         f = Fernet(self.key)
-        unencrypted_data = f.decrypt(encrypted_data).decode('utf-8')
+        unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
         self.subscribers: Dict[str,
                                SubscribersInfo] = json.loads(unencrypted_data)
 
@@ -137,7 +137,7 @@ class Chatbot:
 
         Arguments:
             text -- Contents of the message
-            sender -- Sender's WhatsApp contact info
+            sender -- Sender"s WhatsApp contact info
             media_urls -- a list of media URLs to send, if any
 
         Returns:
@@ -147,26 +147,26 @@ class Chatbot:
         """
         translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
-            if s != sender:
-                if self.subscribers[s]["lang"] in translations:
-                    translated = translations[self.subscribers[s]["lang"]]
-                else:
-                    try:
-                        translated = translate_to(
-                            text, self.subscribers[s]["lang"])
-                    except (TimeoutError, requests.HTTPError) as e:
-                        return str(e)
-                    translations[self.subscribers[s]["lang"]] = translated
-                msg = self.client.messages.create(
-                    from_=f"whatsapp:{self.number}",
-                    to=s,
-                    body=translated,
-                    media_url=media_urls)  # Include media_urls in the message
-                print(msg.sid)
+            # if s != sender:
+            if self.subscribers[s]["lang"] in translations:
+                translated = translations[self.subscribers[s]["lang"]]
+            else:
+                try:
+                    translated = translate_to(
+                        text, self.subscribers[s]["lang"])
+                except (TimeoutError, requests.HTTPError) as e:
+                    return str(e)
+                translations[self.subscribers[s]["lang"]] = translated
+            msg = self.client.messages.create(
+                from_=f"whatsapp:{self.number}",
+                to=s,
+                body=translated,
+                media_url=media_urls)  # Include media_urls in the message
+            print(msg.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
-        """Translate a string to a language, then to a user's native language.
+        """Translate a string to a language, then to a user"s native language.
 
         Arguments:
             msg -- message to translate
@@ -241,10 +241,10 @@ class Chatbot:
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
-            subscribers_list_byte = subscribers_list.encode('utf-8')
+            subscribers_list_byte = subscribers_list.encode("utf-8")
             f = Fernet(self.key)
             encrypted_data = f.encrypt(subscribers_list_byte)
-            with open(self.json_file, 'wb') as file:
+            with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
 
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
@@ -302,10 +302,10 @@ class Chatbot:
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
-            subscribers_list_byte = subscribers_list.encode('utf-8')
+            subscribers_list_byte = subscribers_list.encode("utf-8")
             f = Fernet(self.key)
             encrypted_data = f.encrypt(subscribers_list_byte)
-            with open(self.json_file, 'wb') as file:
+            with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
 
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
@@ -335,7 +335,7 @@ class Chatbot:
             sender = self.subscribers[sender_contact]
             role = sender["role"]
         except KeyError:
-            return ""  # ignore; they aren't subscribed
+            return ""  # ignore; they aren"t subscribed
 
         if not msg and len(media_urls) == 0:
             return ""  # ignore; nothing to send

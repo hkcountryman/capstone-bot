@@ -1,6 +1,16 @@
 # WhatsApp Group Chat Translation Bot
 
-## For development
+## About
+
+This WhatsApp bot holds one-on-one conversations with each subscriber in a "group chat". Members can be added by their WhatsApp number and have roles (user, admin, or superuser) as well as preferred languages. When a user messages the bot, the message is forwarded to all other members of the group, translated into their preferred language.
+
+## Limitations
+
+- Short messages may not be translated. The message language is autodetected, so the translation API requires enough text to determine the original language.
+- WhatsApp polls, replies, and emoji reacts are not supported.
+- If you choose to use a public translation server, you may face fairly long translation times. You will also negate WhatsApp's end-to-end encryption.
+
+## To develop
 
 [This tutorial](https://www.twilio.com/blog/build-a-whatsapp-chatbot-with-python-flask-and-twilio) has a walkthrough similar to the instructions in this document as well as more information about WhatsApp bots.
 
@@ -266,7 +276,7 @@ The superuser must run the setup script prior to starting the server:
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
-### Deploying
+### To deploy
 
 You can deploy in any Linux environment, on either a local machine, a VPS, or an online service like Heroku or AWS. You will run the Flask app on [Gunicorn](https://gunicorn.org/), a Python WSGI HTTP server, proxied behind [nginx](https://nginx.org/), an HTTP proxy server.
 
