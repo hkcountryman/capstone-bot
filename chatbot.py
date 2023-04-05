@@ -147,22 +147,22 @@ class Chatbot:
         """
         translations: Dict[str, str] = {}  # cache previously translated values
         for s in self.subscribers.keys():
-            # if s != sender:
-            if self.subscribers[s]["lang"] in translations:
-                translated = translations[self.subscribers[s]["lang"]]
-            else:
-                try:
-                    translated = translate_to(
-                        text, self.subscribers[s]["lang"])
-                except (TimeoutError, requests.HTTPError) as e:
-                    return str(e)
-                translations[self.subscribers[s]["lang"]] = translated
-            msg = self.client.messages.create(
-                from_=f"whatsapp:{self.number}",
-                to=s,
-                body=translated,
-                media_url=media_urls)  # Include media_urls in the message
-            print(msg.sid)
+            if s != sender:
+                if self.subscribers[s]["lang"] in translations:
+                    translated = translations[self.subscribers[s]["lang"]]
+                else:
+                    try:
+                        translated = translate_to(
+                            text, self.subscribers[s]["lang"])
+                    except (TimeoutError, requests.HTTPError) as e:
+                        return str(e)
+                    translations[self.subscribers[s]["lang"]] = translated
+                msg = self.client.messages.create(
+                    from_=f"whatsapp:{self.number}",
+                    to=s,
+                    body=translated,
+                    media_url=media_urls)  # Include media_urls in the message
+                print(msg.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
