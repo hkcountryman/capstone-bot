@@ -5,6 +5,11 @@
 This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
+
+Classes:
+    SubscribersInfo -- A TypedDict to describe a subscriber to the group chat
+    Chatbot -- A class to keep track of data about a group chat and its
+        associated WhatsApp bot
 """
 
 import json
@@ -65,10 +70,10 @@ class Chatbot:
             for subscribers
         twilio_account_sid -- Account SID for the Twilio account
         twilio_auth_token -- Twilio authorization token
-        twilio_number -- Bot"s registered Twilio number
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
-        process_cmd -- Process a slash command and send a reply from the bot
+        process_msg -- Process a message to the bot
     """
     commands = [
         consts.TEST,
@@ -242,7 +247,7 @@ class Chatbot:
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
 
-    def add_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
 
         Arguments:
@@ -266,7 +271,7 @@ class Chatbot:
 
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                    ) or (not new_contact[1:].isdigit()):
+                ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
 
@@ -315,7 +320,7 @@ class Chatbot:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
 
-    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _remove_subscriber(self, msg: str, sender_contact: str) -> str:
         """
         Remove a subscriber from the dictionary and save the updated dictionary.
 
@@ -437,13 +442,12 @@ class Chatbot:
                         self._test_translate(
                             msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
-                    # Call the add_subscriber method and return its response
                     return self._reply(
-                        self.add_subscriber(
+                        self._add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
                     return self._reply(
-                        self.remove_subscriber(
+                        self._remove_subscriber(
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
                     subscribers = json.dumps(self.subscribers, indent=2)
