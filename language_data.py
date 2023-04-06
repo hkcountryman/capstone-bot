@@ -40,6 +40,10 @@ err_msgs.test_example = "/test es How are you today?"  # /test example
 err_msgs.lang_err = "Choose a valid language. "  # preface errors
 err_msgs.lang_list = ""  # list of all valid languages
 err_msgs.add_example = "/add +12345678900 xX_bob_Xx en user"  # /add example
+# invalid phone number
+err_msgs.add_phone_err = \
+    "A phone number contains only digits and a plus sign for the country code."
+err_msgs.add_name_err = "Choose a different username."  # display name taken
 err_msgs.role_err = "Choose a valid role:"  # preface errors
 err_msgs.roles = " (user | admin | super)"  # valid roles
 err_msgs.exists_err = "User already exists."  # /add existing user
@@ -66,6 +70,8 @@ class LangEntry(TypedDict):
     lang_err: str  # generic error header for invalid languages in this language
     lang_list: str  # list of valid languages (no codes) in this language
     add_example: str  # /add example
+    add_phone_err: str  # invalid phone number
+    add_name_err: str  # display name taken
     role_err: str  # generic error header for invalid roles in this language
     add_role_err: str  # /add role error message in this language
     exists_err: str  # /add error if user exists
@@ -129,6 +135,8 @@ class LangData:
                 "lang_err": "",
                 "lang_list": "",
                 "add_example": "",
+                "add_phone_err": "",
+                "add_name_err": "",
                 "role_err": "",
                 "add_role_err": "",
                 "exists_err": "",
@@ -255,6 +263,44 @@ class LangData:
                 return err_msgs.lang_err + err_msgs.example + \
                     err_msgs.add_example + "\n\n" + err_msgs.lang_list
         return self.entries[code]["add_example"]
+
+    def get_add_phone_err(self, code: str) -> str:
+        """Get a translated error when a phone number is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_phone_err"] == "":
+            try:
+                self.entries[code]["add_phone_err"] = translate_to(
+                    err_msgs.add_phone_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_phone_err
+        return self.entries[code]["add_phone_err"]
+
+    def get_add_name_err(self, code: str) -> str:
+        """Get a translated error when a display name is taken.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_name_err"] == "":
+            try:
+                self.entries[code]["add_name_err"] = translate_to(
+                    err_msgs.add_name_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_name_err
+        return self.entries[code]["add_name_err"]
 
     def _get_role_err(self, code: str) -> str:
         """Get a translated error when a role is invalid.
