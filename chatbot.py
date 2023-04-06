@@ -41,8 +41,9 @@ class SubscribersInfo(TypedDict):
     keys to which are to be strings of WhatsApp contact information of the form
     "whatsapp:<phone number with country code>".
     """
-    lang: str  # user"s preferred language code
-    role: str  # user"s privilege level, "user", "admin", or "super"
+    name: str  # user's display name
+    lang: str  # user's preferred language code
+    role: str  # user's privilege level, "user", "admin", or "super"
 
 
 class Chatbot:
@@ -212,18 +213,25 @@ class Chatbot:
         parts = msg.split()
 
         # Check if there are enough arguments
-        if len(parts) == 4:
-            new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
+        if len(parts) == 5:
+            new_contact = parts[1]
+            new_name = parts[2]
+            new_lang = parts[3]
+            new_role = parts[4]
 
-            # Check if the role is valid
-            if new_role not in consts.VALID_ROLES:
-                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
-                    sender_lang)
+            # TODO: Check if the phone number is valid
+
+            # TODO: Check if the display name is valid (no spaces)
 
             # Check if the language code is valid
             if new_lang not in\
                     Chatbot.languages.codes:  # type: ignore [union-attr]
                 return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            # Check if the role is valid
+            if new_role not in consts.VALID_ROLES:
+                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
                     sender_lang)
 
             new_contact_key = f"whatsapp:{new_contact}"
@@ -233,6 +241,7 @@ class Chatbot:
                     sender_lang)
 
             self.subscribers[new_contact_key] = {
+                "name": new_name,
                 "lang": new_lang,
                 "role": new_role
             }

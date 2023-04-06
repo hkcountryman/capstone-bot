@@ -33,9 +33,14 @@ print("Setting up user data file...\n")
 
 # Get superuser phone number
 sys.stdout.write(BOLD)
-print("Enter your WhatsApp phone number (include country code): ", end="")
+print("Enter your WhatsApp phone number (include country code with +; no other punctuation): ", end="")
 sys.stdout.write(RESET)
-phone_number = input()
+phone_number = ""
+# Checks for the '+' sign
+while not phone_number.startswith("+"):
+    phone_number = input()
+    if not phone_number[1:].isdigit():
+        phone_number = ""
 
 # Get superuser preferred language
 with open("languages.json", "r", encoding="utf-8") as file:
@@ -59,9 +64,16 @@ sys.stdout.write(RESET)
 while language not in [lang["code"] for lang in lang_json]:
     language = input()
 
+# Get superuser preferred display name
+sys.stdout.write(BOLD)
+print("\nEnter a display name (spaces will be removed): ", end="")
+sys.stdout.write(RESET)
+# Remove spaces if superuser added spaces
+display_name = input().replace(" ", "")
+
 # Create super administrator
-user_dict = dict(
-    {"whatsapp:" + phone_number: {"lang": language, "role": "super"}})
+user_dict = dict({"whatsapp:" + phone_number: {"lang": language,
+                                               "name": display_name, "role": "super"}})
 
 # Create a key or Retrieve a key if file already exists
 if not os.path.isfile("json/key.key"):
