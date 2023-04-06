@@ -212,8 +212,8 @@ class Chatbot:
         parts = msg.split()
 
         # Check if there are enough arguments
-        if len(parts) == 4:
-            new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
+        if len(parts) == 5:
+            new_contact, new_lang, new_name, new_role = parts[1], parts[2], parts[3], parts[4]
 
             # Check if the role is valid
             if new_role not in consts.VALID_ROLES:
@@ -234,6 +234,7 @@ class Chatbot:
 
             self.subscribers[new_contact_key] = {
                 "lang": new_lang,
+                "name": new_name,
                 "role": new_role
             }
 

@@ -35,6 +35,7 @@ print("Setting up user data file...\n")
 sys.stdout.write(BOLD)
 print("Enter your WhatsApp phone number (include (+) country code): ", end="")
 sys.stdout.write(RESET)
+phone_number = ""
 # Checks for the '+' sign
 while not phone_number.startswith('+'):
     phone_number = input()
