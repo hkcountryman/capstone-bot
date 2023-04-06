@@ -188,9 +188,9 @@ class Chatbot:
 
         Arguments:
             msg -- message contents
-            sender -- sender name
+            sender -- sender display name
             sender_lang -- sender preferred language code
-            recipient -- recipient WhatsApp contact info
+            recipient -- recipient display name
             media_urls -- any attached media URLs from Twilio's CDN
 
         Returns:
@@ -202,7 +202,8 @@ class Chatbot:
         if recipient not in self.display_names:
             return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
                 sender_lang)
-        recipient_lang = self.subscribers[self.display_names[recipient]]["lang"]
+        recipient_contact = self.display_names[recipient]
+        recipient_lang = self.subscribers[recipient_contact]["lang"]
         text = f"Private message from {sender}:\n{msg}"
         try:
             translated = translate_to(text, recipient_lang)
@@ -210,7 +211,7 @@ class Chatbot:
             return str(e)
         pm = self.client.messages.create(
             from_=f"whatsapp:{self.number}",
-            to=recipient,
+            to=recipient_contact,
             body=translated,
             media_url=media_urls)
         print(pm.sid)
