@@ -33,12 +33,14 @@ print("Setting up user data file...\n")
 
 # Get superuser phone number
 sys.stdout.write(BOLD)
-print("Enter your WhatsApp phone number (include (+) country code): ", end="")
+print("Enter your WhatsApp phone number (include country code with +; no other punctuation): ", end="")
 sys.stdout.write(RESET)
 phone_number = ""
 # Checks for the '+' sign
-while not phone_number.startswith('+'):
+while not phone_number.startswith("+"):
     phone_number = input()
+    if not phone_number[1:].isdigit():
+        phone_number = ""
 
 # Get superuser preferred language
 with open("languages.json", "r", encoding="utf-8") as file:
@@ -64,7 +66,7 @@ while language not in [lang["code"] for lang in lang_json]:
 
 # Get superuser preferred display name
 sys.stdout.write(BOLD)
-print("Enter your preferred WhatsApp display name (spaces will be removed): ", end="")
+print("\nEnter a display name (spaces will be removed): ", end="")
 sys.stdout.write(RESET)
 # Remove spaces if superuser added spaces
 display_name = input().replace(" ", "")
