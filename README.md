@@ -1,6 +1,16 @@
 # WhatsApp Group Chat Translation Bot
 
-## For development
+## About
+
+This WhatsApp bot holds one-on-one conversations with each subscriber in a "group chat". Members can be added by their WhatsApp number and have roles (user, admin, or superuser) as well as preferred languages. When a user messages the bot, the message is forwarded to all other members of the group, translated into their preferred language.
+
+## Limitations
+
+- Short messages may not be translated. The message language is autodetected, so the translation API requires enough text to determine the original language.
+- WhatsApp polls, replies, and emoji reacts are not supported.
+- If you choose to use a public translation server, you may face fairly long translation times. You will also negate WhatsApp's end-to-end encryption.
+
+## To develop
 
 [This tutorial](https://www.twilio.com/blog/build-a-whatsapp-chatbot-with-python-flask-and-twilio) has a walkthrough similar to the instructions in this document as well as more information about WhatsApp bots.
 
@@ -100,6 +110,16 @@ Notice that some of the values of the environment variables are left up to you t
 ![image](https://user-images.githubusercontent.com/62478826/225091129-7480cb50-223e-4e53-b801-dafcd1e3442d.png)
 
 Now you can run the server from inside the IDE.
+
+#### JSON user file
+
+The superuser must run the setup script prior to starting the server:
+
+```
+./setup.py [JSON file name]
+```
+
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
 #### Dependencies
 
@@ -248,14 +268,15 @@ The system must have the following environment variables set:
 
 #### JSON user file
 
-The super administrator must run a simple python script `setup.py` prior to starting the server. The script will set:
+The superuser must run the setup script prior to starting the server:
 
-- `Phone Number`: The super administrator's personal WhatsApp phone number (Note: Omit the +1)
-` 'Language`: The super administrator's preferred WhatsApp language
+```
+./setup.py [JSON file name]
+```
 
-The JSON file is encrypted via an AES 128-bit ["cipher"](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key. 
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
-### Deploying
+### To deploy
 
 You can deploy in any Linux environment, on either a local machine, a VPS, or an online service like Heroku or AWS. You will run the Flask app on [Gunicorn](https://gunicorn.org/), a Python WSGI HTTP server, proxied behind [nginx](https://nginx.org/), an HTTP proxy server.
 
