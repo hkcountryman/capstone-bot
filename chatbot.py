@@ -5,6 +5,11 @@
 This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
+
+Classes:
+    SubscribersInfo -- A TypedDict to describe a subscriber to the group chat
+    Chatbot -- A class to keep track of data about a group chat and its
+        associated WhatsApp bot
 """
 
 import json
@@ -33,6 +38,8 @@ consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
 consts.VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 
+pm_char = "#"  # Example: #xX_bob_Xx Hey bob, this is a private message!
+
 
 class SubscribersInfo(TypedDict):
     """A TypedDict to describe a subscriber.
@@ -59,12 +66,14 @@ class Chatbot:
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
         subscribers -- Dictionary containing the data loaded from the file
+        display_names -- Dictionary mapping display names to WhatsApp numbers
+            for subscribers
         twilio_account_sid -- Account SID for the Twilio account
         twilio_auth_token -- Twilio authorization token
-        twilio_number -- Bot"s registered Twilio number
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
-        process_cmd -- Process a slash command and send a reply from the bot
+        process_msg -- Process a message to the bot
     """
     commands = [
         consts.TEST,
@@ -114,6 +123,8 @@ class Chatbot:
         unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
         self.subscribers: Dict[str,
                                SubscribersInfo] = json.loads(unencrypted_data)
+        self.display_names: Dict[str, str] = {
+            v["name"]: k for k, v in self.subscribers.items()}
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -162,8 +173,48 @@ class Chatbot:
                     from_=f"whatsapp:{self.number}",
                     to=s,
                     body=translated,
-                    media_url=media_urls)  # Include media_urls in the message
+                    media_url=media_urls)
                 print(msg.sid)
+        return ""
+
+    def _query(
+            self,
+            msg: str,
+            sender: str,
+            sender_lang: str,
+            recipient: str,
+            media_urls: List[str]) -> str:
+        """Send a private message to a single recipient.
+
+        Arguments:
+            msg -- message contents
+            sender -- sender display name
+            sender_lang -- sender preferred language code
+            recipient -- recipient display name
+            media_urls -- any attached media URLs from Twilio's CDN
+
+        Returns:
+            An empty string to the sender, or else an error message if the
+                request to the LibreTranslate API times out or has some other
+                error.
+        """
+        # Check whether recipient exists
+        if recipient not in self.display_names:
+            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                sender_lang)
+        recipient_contact = self.display_names[recipient]
+        recipient_lang = self.subscribers[recipient_contact]["lang"]
+        text = f"Private message from {sender}:\n{msg}"
+        try:
+            translated = translate_to(text, recipient_lang)
+        except (TimeoutError, requests.HTTPError) as e:
+            return str(e)
+        pm = self.client.messages.create(
+            from_=f"whatsapp:{self.number}",
+            to=recipient_contact,
+            body=translated,
+            media_url=media_urls)
+        print(pm.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
@@ -197,7 +248,7 @@ class Chatbot:
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
 
-    def add_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
 
         Arguments:
@@ -219,9 +270,22 @@ class Chatbot:
             new_lang = parts[3]
             new_role = parts[4]
 
-            # TODO: Check if the phone number is valid
+            # Check if the phone number is valid
+            if (not new_contact.startswith("+")
+                ) or (not new_contact[1:].isdigit()):
+                return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
+                    sender_lang)
 
-            # TODO: Check if the display name is valid (no spaces)
+            new_contact_key = f"whatsapp:{new_contact}"
+            # Check if the user already exists
+            if new_contact_key in self.subscribers:
+                return Chatbot.languages.get_exists_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            # Check if the display name is untaken
+            if new_name in self.display_names:
+                return Chatbot.languages.get_add_name_err(  # type: ignore [union-attr]
+                    sender_lang)
 
             # Check if the language code is valid
             if new_lang not in\
@@ -234,17 +298,12 @@ class Chatbot:
                 return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
                     sender_lang)
 
-            new_contact_key = f"whatsapp:{new_contact}"
-            # Check if the user already exists
-            if new_contact_key in self.subscribers:
-                return Chatbot.languages.get_exists_err(  # type: ignore [union-attr]
-                    sender_lang)
-
             self.subscribers[new_contact_key] = {
                 "name": new_name,
                 "lang": new_lang,
                 "role": new_role
             }
+            self.display_names[new_name] = new_contact_key
 
             # Save the updated subscribers to team56test.json
             # Convert the dictionary of subscribers to a formatted JSON string
@@ -262,7 +321,7 @@ class Chatbot:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
 
-    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _remove_subscriber(self, msg: str, sender_contact: str) -> str:
         """
         Remove a subscriber from the dictionary and save the updated dictionary.
 
@@ -305,6 +364,8 @@ class Chatbot:
                 return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
                     sender_lang)
             else:
+                name = self.subscribers[user_contact_key]["name"]
+                del self.display_names[name]
                 del self.subscribers[user_contact_key]
 
             # Save the updated subscribers to team56test.json
@@ -327,14 +388,12 @@ class Chatbot:
             self,
             msg: str,
             sender_contact: str,
-            sender_name: str,
             media_urls: List[str]) -> str:
         """Process a bot command.
 
         Arguments:
             msg -- the message sent to the bot
             sender_contact -- the WhatsApp contact info of the sender
-            sender_name -- the WhatsApp profile name of the sender
             media_urls -- a list of media URLs sent with the message, if any
 
         Returns:
@@ -342,7 +401,9 @@ class Chatbot:
         """
         try:
             sender = self.subscribers[sender_contact]
+            sender_name = sender["name"]
             role = sender["role"]
+            sender_lang = sender["lang"]
         except KeyError:
             return ""  # ignore; they aren"t subscribed
 
@@ -351,7 +412,20 @@ class Chatbot:
 
         word_1 = msg.split()[0].lower() if msg else ""
 
-        if role == consts.USER:
+        # PM someone:
+        if word_1[0:1] == pm_char:
+            split = msg.split()  # don't convert first word to lowercase
+            pm_name = split[0][1:]  # display name without PM character
+            return self._reply(
+                self._query(
+                    " ".join(split[1:]),
+                    sender_name,
+                    sender_lang,
+                    pm_name,
+                    media_urls))
+
+        # Message group or /test as user:
+        elif role == consts.USER:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
             elif word_1[0:1] == "/" and len(word_1) > 1:
@@ -360,6 +434,8 @@ class Chatbot:
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact, media_urls)
                 return ""  # say nothing to sender
+
+        # Message group or perform any slash command as admin or superuser:
         else:
             match word_1:
                 case consts.TEST:  # test translate
@@ -367,13 +443,12 @@ class Chatbot:
                         self._test_translate(
                             msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
-                    # Call the add_subscriber method and return its response
                     return self._reply(
-                        self.add_subscriber(
+                        self._add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
                     return self._reply(
-                        self.remove_subscriber(
+                        self._remove_subscriber(
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
                     subscribers = json.dumps(self.subscribers, indent=2)

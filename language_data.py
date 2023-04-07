@@ -4,6 +4,18 @@ This module contains information about languages supported by LibreTranslate. It
 includes the LangData class, which can be shared by all chatbots on the server
 to look up language names, codes, and error messages, as well as the
 translate_to function, which can translate text into a target language.
+
+Classes:
+    LangEntry -- A TypedDict to describe all data associated with a language
+        code, namely the human-readable name, translation target codes, and
+        error and success messages translated into that language
+    LangData -- A class containing convenience members for maintaining the
+        LangEntry dictionaries for all supported languages, a list of all
+        language codes, a list of all language names, and methods to return
+        translated error and success messages
+
+Functions:
+    translate_to -- Translate some text to a given target language
 """
 
 import json
@@ -40,6 +52,10 @@ err_msgs.test_example = "/test es How are you today?"  # /test example
 err_msgs.lang_err = "Choose a valid language. "  # preface errors
 err_msgs.lang_list = ""  # list of all valid languages
 err_msgs.add_example = "/add +12345678900 xX_bob_Xx en user"  # /add example
+# invalid phone number
+err_msgs.add_phone_err = \
+    "A phone number contains only digits and a plus sign for the country code."
+err_msgs.add_name_err = "Choose a different username."  # display name taken
 err_msgs.role_err = "Choose a valid role:"  # preface errors
 err_msgs.roles = " (user | admin | super)"  # valid roles
 err_msgs.exists_err = "User already exists."  # /add existing user
@@ -55,7 +71,11 @@ success.removed = "User removed successfully."
 
 
 class LangEntry(TypedDict):
-    """A TypedDict to describe associated data for some language code."""
+    """A TypedDict to describe associated data for some language code.
+
+    The error and success messages should be initialized to empty strings and
+    are saved as they are needed and subsequently translated into the language.
+    """
     # Language data
     name: str  # human-readable name
     targets: List[str]  # codes for targets this language can be translated to
@@ -66,6 +86,8 @@ class LangEntry(TypedDict):
     lang_err: str  # generic error header for invalid languages in this language
     lang_list: str  # list of valid languages (no codes) in this language
     add_example: str  # /add example
+    add_phone_err: str  # invalid phone number
+    add_name_err: str  # display name taken
     role_err: str  # generic error header for invalid roles in this language
     add_role_err: str  # /add role error message in this language
     exists_err: str  # /add error if user exists
@@ -83,7 +105,10 @@ class LangData:
     """An object that can hold all language data.
 
     Language data includes human-readable names and translation targets
-    associated with a language code as well as error messages
+    associated with a language code as well as error messages.
+
+    It also has methods to return error and success messages translated into a
+    given language.
 
     Instance variables:
         codes -- List of all language codes supported by LibreTranslate
@@ -93,9 +118,25 @@ class LangData:
             corresponding LangEntry dictionaries
 
     Methods:
-        get_test_example -- get the /test error message for a given language
-            code
-        get_add_example -- get the /add error message for a given language code
+        get_test_example -- get the /test error message
+        get_add_lang_err -- get the error message when /add uses an invalid
+            language
+        get_add_phone_err -- get the /add error message when a phone number is
+            invalid
+        get_add_name_err -- get the /add error message when a display name is
+            already taken
+        get_add_role_err -- get the /add error message when a role is invalid
+        get_exists_err -- get the /add error message when attempting to add an
+            existing user
+        get_add_err -- get the generic /add error message for bad syntax
+        get_add_success -- get a success message for /add
+        get_unfound_err -- get an error message when referencing a nonexistent
+            user
+        get_remove_err -- get the generic /remove error message for bad syntax
+        get_remove_self_err -- get the error message for removing yourself
+        get_remove_super_err -- get the error message for removing a superuser
+            as an admin
+        get_remove_success -- get a success message for /remove
     """
 
     def __init__(self):
@@ -129,6 +170,8 @@ class LangData:
                 "lang_err": "",
                 "lang_list": "",
                 "add_example": "",
+                "add_phone_err": "",
+                "add_name_err": "",
                 "role_err": "",
                 "add_role_err": "",
                 "exists_err": "",
@@ -256,6 +299,44 @@ class LangData:
                     err_msgs.add_example + "\n\n" + err_msgs.lang_list
         return self.entries[code]["add_example"]
 
+    def get_add_phone_err(self, code: str) -> str:
+        """Get a translated error when a phone number is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_phone_err"] == "":
+            try:
+                self.entries[code]["add_phone_err"] = translate_to(
+                    err_msgs.add_phone_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_phone_err
+        return self.entries[code]["add_phone_err"]
+
+    def get_add_name_err(self, code: str) -> str:
+        """Get a translated error when a display name is taken.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_name_err"] == "":
+            try:
+                self.entries[code]["add_name_err"] = translate_to(
+                    err_msgs.add_name_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_name_err
+        return self.entries[code]["add_name_err"]
+
     def _get_role_err(self, code: str) -> str:
         """Get a translated error when a role is invalid.
 
@@ -357,7 +438,7 @@ class LangData:
     # /remove
 
     def get_unfound_err(self, code: str) -> str:
-        """Get a translated error when calling /remove on a nonexistent user.
+        """Get a translated error when referencing a nonexistent user.
 
         Arguments:
             code -- Code of the language to translate the output to
