@@ -93,6 +93,7 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
+            backup_file: str = "bot_subscribers/backup.json",
             key_file: str = "json/key.key"):
         """Create the ChatBot object and populate class members as needed.
 
@@ -102,6 +103,8 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            backup_file -- Path to a JSON file containing backup data for the
+                above JSON file
             key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
@@ -109,20 +112,28 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
+        self.backup_file = backup_file
         self.key_file = key_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
-
         with open(self.json_file, "rb") as file:
             encrypted_data = file.read()
-        # Retrieve encryption key
         with open(self.key_file, "rb") as file:
-            self.key = file.read()
+            self.key = file.read()  # Retrieve encryption key
         f = Fernet(self.key)
-        unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
-        self.subscribers: Dict[str,
-                               SubscribersInfo] = json.loads(unencrypted_data)
+        try:
+            unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
+            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
+                unencrypted_data)
+        except BaseException:  # Handle corrupted file
+            # TODO: Print message to super administrator that original file is
+            # corrupted...recent data may not have been saved.
+            with open(self.backup_file, "rb") as file:
+                backup_encrypted_data = file.read()
+            backup_unencrypted_data = f.decrypt(
+                backup_encrypted_data).decode("utf-8")
+            self.subscribers = json.loads(backup_unencrypted_data)
         self.display_names: Dict[str, str] = {
             v["name"]: k for k, v in self.subscribers.items()}
 
@@ -315,6 +326,11 @@ class Chatbot:
             with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
 
+            # Copy data to backup file
+            with open(self.json_file, 'rb') as fileone, open(self.backup_file, 'wb') as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
         else:
@@ -378,6 +394,11 @@ class Chatbot:
             with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
 
+            # Copy data to backup file
+            with open(self.json_file, 'rb') as fileone, open(self.backup_file, 'wb') as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                 sender_lang)
         else:
@@ -405,7 +426,7 @@ class Chatbot:
             role = sender["role"]
             sender_lang = sender["lang"]
         except KeyError:
-            return ""  # ignore; they aren"t subscribed
+            return ""  # ignore; they aren't subscribed
 
         if not msg and len(media_urls) == 0:
             return ""  # ignore; nothing to send
@@ -466,11 +487,13 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+BACKUP_FILE: str = "bot_subscribers/backup.json"
 KEY_FILE: str = "json/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
     SUBSCRIBER_FILE,
+    BACKUP_FILE,
     KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""

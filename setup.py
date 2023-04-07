@@ -18,6 +18,7 @@ RESET = "\033[0;0m"
 
 # File name
 JSON_FILE = "team56test.json"
+BACKUP_FILE = "backup.json"
 
 
 def usage():
@@ -89,6 +90,7 @@ user_list = json.dumps(user_dict, indent=4)
 user_list_byte = user_list.encode("utf-8")
 f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
+
 try:
     with open(f"bot_subscribers/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
@@ -99,6 +101,20 @@ except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
         f"\nA file under bot_subscribers/{JSON_FILE} already exists. " +
+        "Delete and try again.")
+    sys.stdout.write(RESET)
+    sys.exit(1)
+
+try:
+    with open(f"bot_subscribers/{BACKUP_FILE}", "xb") as file:
+        file.write(encrypted_data)
+    sys.stdout.write(BOLD + GREEN)
+    print(f"\nbot_subscribers/{BACKUP_FILE} created.")
+    sys.stdout.write(RESET)
+except FileExistsError:
+    sys.stdout.write(BOLD + RED)
+    print(
+        f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
