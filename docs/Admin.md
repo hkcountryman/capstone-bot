@@ -9,6 +9,7 @@ Required Fields:
 - Language code - User's preferred language code. More information can be found in the Languages.md file.
 - Display name - User's display name (__No spaces allowed__)
 - User type - Super administrator (super), administrator (admin), or regular user (user)
+
 <br>Error(s):
 - Incorrect number of arguments delimited by space(s)
 - Invalid language code
@@ -21,9 +22,11 @@ Required Fields:
 ```
 Required Fields:
 - WhatsApp number - User's WhatsApp number (__Must__ include '+' and country code)
+
 <br>Error(s):
 - Incorrect number of arguments delimited by space(s)
 - WhatsApp number does not exist in the group chat
+
 <br>__Note:__ An administrator cannot remove himself/herself. An administrator also cannot remove a super administrator.
 
 ### List all Users
