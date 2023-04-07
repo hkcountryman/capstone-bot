@@ -213,19 +213,20 @@ class Chatbot:
         if recipient not in self.display_names:
             return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
                 sender_lang)
-        recipient_contact = self.display_names[recipient]
-        recipient_lang = self.subscribers[recipient_contact]["lang"]
-        text = f"Private message from {sender}:\n{msg}"
-        try:
-            translated = translate_to(text, recipient_lang)
-        except (TimeoutError, requests.HTTPError) as e:
-            return str(e)
-        pm = self.client.messages.create(
-            from_=f"whatsapp:{self.number}",
-            to=recipient_contact,
-            body=translated,
-            media_url=media_urls)
-        print(pm.sid)
+        if not (msg == "" and len(media_urls) == 0):  # something to send
+            recipient_contact = self.display_names[recipient]
+            recipient_lang = self.subscribers[recipient_contact]["lang"]
+            text = f"Private message from {sender}:\n{msg}"
+            try:
+                translated = translate_to(text, recipient_lang)
+            except (TimeoutError, requests.HTTPError) as e:
+                return str(e)
+            pm = self.client.messages.create(
+                from_=f"whatsapp:{self.number}",
+                to=recipient_contact,
+                body=translated,
+                media_url=media_urls)
+            print(pm.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
@@ -283,7 +284,7 @@ class Chatbot:
 
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                ) or (not new_contact[1:].isdigit()):
+                    ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
 
