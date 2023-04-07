@@ -266,7 +266,7 @@ class Chatbot:
         # Check if there are enough arguments
         if len(parts) == 5:
             new_contact = parts[1]
-            new_name = parts[2].replace(" ", "")  # remove spaces
+            new_name = parts[2]
             new_lang = parts[3]
             new_role = parts[4]
 
