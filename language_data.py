@@ -47,7 +47,9 @@ err_msgs.remove_example = "/remove +12345678900"  # /remove example
 err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
-err_msgs.stats_err = "Invalid time frame. Use format: 'X days'."  # Invalid time frame
+err_msgs.stats_err = "Invalid time frame. Use format: 7 day(s)."  # Invalid time frame
+err_msgs.stats_usage_err = "/stats +12345678900 1 day"
+
 
 # Strings for success messages
 success = SimpleNamespace()
@@ -75,6 +77,7 @@ class LangEntry(TypedDict):
     remove_self_err: str  # /remove error if user tries to remove self
     remove_super_err: str  # /remove error if admin tries to remove super
     stats_err: str  # /stats error if invalid time frame
+    stats_usage_err: str  # /stats error if invalid usage
 
     # Success messages
     added: str  # /add
@@ -139,6 +142,7 @@ class LangData:
                 "remove_self_err": "",
                 "remove_super_err": "",
                 "stats_err": "",
+                "stats_usage_err": "",
                 "added": "",
                 "removed": ""}
         err_msgs.lang_list = "".join(
@@ -455,13 +459,42 @@ class LangData:
         return self.entries[code]["removed"]
 
     def get_stats_err(self, code: str) -> str:
+        """Get a translated error message for invalid time frames in the /stats command.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
         if self.entries[code]["stats_err"] == "":
             try:
                 self.entries[code]["stats_err"] = translate_to(
                     err_msgs.stats_err, code)
             except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
                 return err_msgs.stats_err
         return self.entries[code]["stats_err"]
+    
+    def get_stats_usage_err(self, code: str) -> str:
+        """Get a translated error message for incorrect usage of the /stats command.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["stats_usage_err"] == "":
+            try:
+                self.entries[code]["stats_usage_err"] = translate_to(
+                    err_msgs.stats_usage_err, code)
+            except (TimeoutError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.stats_usage_err
+        return self.entries[code]["stats_usage_err"]
 
 
 def translate_to(text: str, target_lang: str) -> str:

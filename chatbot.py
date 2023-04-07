@@ -333,8 +333,18 @@ class Chatbot:
                 sender_lang)
 
     def store_message_timestamp(self, sender_contact: str, msg: str) -> None:
+        """
+        Store the timestamp of a message sent by a user if it's not a command.
+
+        Arguments:
+            sender_contact -- WhatsApp contact info of the sender
+            msg -- the message sent to the bot
+
+        Returns:
+            None
+        """
         # Check if the message is a command; if yes, do not count it
-        if msg.startswith("/"):
+        if len(msg) > 0 and msg.startswith("/"):
             return
 
         timestamp = datetime.now().strftime("%Y-%m-%d")
@@ -352,24 +362,55 @@ class Chatbot:
     def generate_stats(
             self,
             sender_contact: str,
-            target_contact: str,
-            start_date: str,
-            end_date: str) -> str:
-        if target_contact not in self.subscribers:
-            return "Target user not found."
+            msg: str) -> str:
+        """
+        Generate message statistics for a specified user and time frame.
 
-        if self.subscribers[sender_contact]["role"] not in ("admin", "super"):
-            return ""
+        Arguments:
+            sender_contact -- WhatsApp contact info of the sender
+            msg -- the message sent to the bot, containing the user contact
+                and the time frame for statistics
 
-        start_date = datetime.fromisoformat(start_date)
-        end_date = datetime.fromisoformat(end_date)
+        Returns:
+            A string containing the message statistics or an error message
+                if the input is incorrect or the user is not found.
+        """
+        sender_lang = self.subscribers[sender_contact]["lang"]
+
+        split_msg = msg.split()
+        if len(split_msg) == 4:
+            target_contact, days_str, unit = split_msg[1], split_msg[2], split_msg[3]
+            time_frame = f"{days_str}{unit}"
+        else:
+            return Chatbot.languages.get_stats_usage_err(sender_lang)
+
+        target_contact_key = f"whatsapp:{target_contact}"
+
+        if target_contact_key not in self.subscribers:
+            return Chatbot.languages.get_unfound_err(sender_lang)
+
+        # Check if the time frame is valid
+        pattern = r"(\d+)\s*(\w+)"
+        match = re.match(pattern, time_frame)
+        if match:
+            days, unit = int(match.group(1)), match.group(2)
+            if unit not in ("day", "days"):
+                return Chatbot.languages.get_stats_err(sender_lang)
+        else:
+            return Chatbot.languages.get_stats_err(sender_lang)
+
+        # Calculate the start and end dates
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
 
         message_count = 0
-        for timestamp_str in self.logs[target_contact]["timestamps"]:
+        for timestamp_str in self.logs[target_contact_key]["timestamps"]:
             timestamp = datetime.fromisoformat(timestamp_str)
             if start_date <= timestamp <= end_date:
                 message_count += 1
 
+        if message_count == 0:
+            return f"User {target_contact} sent {message_count} messages."
         return f"User {target_contact} sent {message_count} messages."
 
     def process_msg(
@@ -431,38 +472,8 @@ class Chatbot:
                     return self._reply(f"List of subscribers:\n{subscribers}")
 
                 case consts.STATS:
-                    split_msg = msg.split()
-                    if len(split_msg) == 3:
-                        target_contact, time_frame = sender_contact, split_msg[2]
-                    elif len(split_msg) == 4:
-                        target_contact, time_frame = split_msg[1], split_msg[3]
-                    else:
-                        return self._reply(
-                            "Usage: /stats [target_contact] <time_frame>")
-
-                    # Parse the time frame
-                    pattern = r"(\d+)\s*(\w+)"
-                    match = re.match(pattern, time_frame)
-                    if match:
-                        days, unit = int(match.group(1)), match.group(2)
-                        if unit not in ("day", "days"):
-                            return self._reply(
-                                "Invalid time frame. Use format: 'X days'.")
-
-                        # Calculate the start and end dates
-                        end_date = datetime.now()
-                        start_date = end_date - timedelta(days=days)
-
-                        # Get the stats
-                        stats = self.generate_stats(
-                            sender_contact,
-                            target_contact,
-                            start_date.isoformat(),
-                            end_date.isoformat())
-                        return self._reply(stats)
-                    else:
-                        return self._reply(
-                            "Invalid time frame. Use format: 'X days'.")
+                    stats = self.generate_stats(sender_contact, msg)
+                    return self._reply(stats)
 
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
