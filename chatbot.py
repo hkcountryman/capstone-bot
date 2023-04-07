@@ -11,6 +11,8 @@ import json
 import os
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
+from datetime import datetime, timedelta
+import re
 
 import requests
 from cryptography.fernet import Fernet
@@ -27,6 +29,8 @@ consts.REMOVE = "/remove"  # remove user
 consts.ADMIN = "/admin"  # toggle admin vs. user role for user
 consts.LIST = "/list"  # list all users
 consts.LANG = "/lang"  # set language for user
+consts.STATS = "/stats"  # get stats for user
+
 # Roles for users in JSON file
 consts.USER = "user"  # can only execute test translation command
 consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
@@ -71,7 +75,8 @@ class Chatbot:
         consts.REMOVE,
         consts.ADMIN,
         consts.LIST,
-        consts.LANG]
+        consts.LANG,
+        consts.STATS]
     """All slash commands for the bot."""
 
     languages: LangData | None = None
@@ -83,7 +88,8 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
-            key_file: str = "json/key.key"):
+            key_file: str = "json/key.key",
+            logs_file: str = "logs.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -100,9 +106,18 @@ class Chatbot:
         self.number = number
         self.json_file = json_file
         self.key_file = key_file
+        self.logs_file = logs_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
+
+        try:
+            with open(self.logs_file, "r") as file:
+                self.logs = json.load(file)
+        except FileNotFoundError:
+            self.logs = {}
+            with open(self.logs_file, "w") as file:
+                json.dump(self.logs, file)
 
         with open(self.json_file, "rb") as file:
             encrypted_data = file.read()
@@ -317,6 +332,46 @@ class Chatbot:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
 
+    def store_message_timestamp(self, sender_contact: str, msg: str) -> None:
+        # Check if the message is a command; if yes, do not count it
+        if msg.startswith("/"):
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d")
+
+        # Add the timestamp to the logs
+        if sender_contact in self.logs:
+            self.logs[sender_contact]["timestamps"].append(timestamp)
+        else:
+            self.logs[sender_contact] = {"timestamps": [timestamp]}
+
+        # Save the updated logs to the logs.json file
+        with open(self.logs_file, "w") as file:
+            json.dump(self.logs, file, indent=2)
+
+    def generate_stats(
+            self,
+            sender_contact: str,
+            target_contact: str,
+            start_date: str,
+            end_date: str) -> str:
+        if target_contact not in self.subscribers:
+            return "Target user not found."
+
+        if self.subscribers[sender_contact]["role"] not in ("admin", "super"):
+            return ""
+
+        start_date = datetime.fromisoformat(start_date)
+        end_date = datetime.fromisoformat(end_date)
+
+        message_count = 0
+        for timestamp_str in self.logs[target_contact]["timestamps"]:
+            timestamp = datetime.fromisoformat(timestamp_str)
+            if start_date <= timestamp <= end_date:
+                message_count += 1
+
+        return f"User {target_contact} sent {message_count} messages."
+
     def process_msg(
             self,
             msg: str,
@@ -340,6 +395,8 @@ class Chatbot:
         except KeyError:
             return ""  # ignore; they aren"t subscribed
 
+        self.store_message_timestamp(sender_contact, msg)
+        
         if not msg and len(media_urls) == 0:
             return ""  # ignore; nothing to send
 
@@ -372,6 +429,41 @@ class Chatbot:
                 case consts.LIST:  # list all subscribers with their data
                     subscribers = json.dumps(self.subscribers, indent=2)
                     return self._reply(f"List of subscribers:\n{subscribers}")
+
+                case consts.STATS:
+                    split_msg = msg.split()
+                    if len(split_msg) == 3:
+                        target_contact, time_frame = sender_contact, split_msg[2]
+                    elif len(split_msg) == 4:
+                        target_contact, time_frame = split_msg[1], split_msg[3]
+                    else:
+                        return self._reply(
+                            "Usage: /stats [target_contact] <time_frame>")
+
+                    # Parse the time frame
+                    pattern = r"(\d+)\s*(\w+)"
+                    match = re.match(pattern, time_frame)
+                    if match:
+                        days, unit = int(match.group(1)), match.group(2)
+                        if unit not in ("day", "days"):
+                            return self._reply(
+                                "Invalid time frame. Use format: 'X days'.")
+
+                        # Calculate the start and end dates
+                        end_date = datetime.now()
+                        start_date = end_date - timedelta(days=days)
+
+                        # Get the stats
+                        stats = self.generate_stats(
+                            sender_contact,
+                            target_contact,
+                            start_date.isoformat(),
+                            end_date.isoformat())
+                        return self._reply(stats)
+                    else:
+                        return self._reply(
+                            "Invalid time frame. Use format: 'X days'.")
+
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command

@@ -47,6 +47,7 @@ err_msgs.remove_example = "/remove +12345678900"  # /remove example
 err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
+err_msgs.stats_err = "Invalid time frame. Use format: 'X days'."  # Invalid time frame
 
 # Strings for success messages
 success = SimpleNamespace()
@@ -73,6 +74,7 @@ class LangEntry(TypedDict):
     unfound_err: str  # /remove error if user not found
     remove_self_err: str  # /remove error if user tries to remove self
     remove_super_err: str  # /remove error if admin tries to remove super
+    stats_err: str  # /stats error if invalid time frame
 
     # Success messages
     added: str  # /add
@@ -136,6 +138,7 @@ class LangData:
                 "unfound_err": "",
                 "remove_self_err": "",
                 "remove_super_err": "",
+                "stats_err": "",
                 "added": "",
                 "removed": ""}
         err_msgs.lang_list = "".join(
@@ -450,6 +453,15 @@ class LangData:
                 # and return it in English
                 return success.removed
         return self.entries[code]["removed"]
+
+    def get_stats_err(self, code: str) -> str:
+        if self.entries[code]["stats_err"] == "":
+            try:
+                self.entries[code]["stats_err"] = translate_to(
+                    err_msgs.stats_err, code)
+            except (TimeoutError, requests.HTTPError):
+                return err_msgs.stats_err
+        return self.entries[code]["stats_err"]
 
 
 def translate_to(text: str, target_lang: str) -> str:
