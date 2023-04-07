@@ -134,6 +134,8 @@ class Chatbot:
             backup_unencrypted_data = f.decrypt(
                 backup_encrypted_data).decode("utf-8")
             self.subscribers = json.loads(backup_unencrypted_data)
+        self.display_names: Dict[str, str] = {
+            v["name"]: k for k, v in self.subscribers.items()}
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -424,7 +426,7 @@ class Chatbot:
             role = sender["role"]
             sender_lang = sender["lang"]
         except KeyError:
-            return ""  # ignore; they aren"t subscribed
+            return ""  # ignore; they aren't subscribed
 
         if not msg and len(media_urls) == 0:
             return ""  # ignore; nothing to send
