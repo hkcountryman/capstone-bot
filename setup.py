@@ -69,12 +69,11 @@ while language not in [lang["code"] for lang in lang_json]:
 sys.stdout.write(BOLD)
 print("\nEnter a display name (spaces will be removed): ", end="")
 sys.stdout.write(RESET)
-# Remove spaces if superuser added spaces
-display_name = input().replace(" ", "")
+display_name = input().replace(" ", "")  # remove spaces
 
-# Create super administrator
-user_dict = dict({"whatsapp:" + phone_number: {"lang": language,
-                                               "name": display_name, "role": "super"}})
+# Create subscriber dictionary with superuser
+user_dict = dict({f"whatsapp:{phone_number}": {
+                 "lang": language, "name": display_name, "role": "super"}})
 
 # Create a key or Retrieve a key if file already exists
 if not os.path.isfile("json/key.key"):
