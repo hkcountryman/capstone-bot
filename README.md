@@ -119,7 +119,7 @@ The superuser must run the setup script prior to starting the server:
 ./setup.py [JSON file name]
 ```
 
-The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
 #### Dependencies
 
@@ -274,7 +274,7 @@ The superuser must run the setup script prior to starting the server:
 ./setup.py [JSON file name]
 ```
 
-The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
 
 ### To deploy
 
