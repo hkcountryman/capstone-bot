@@ -16,6 +16,7 @@ Required Fields:
 - Invalid user type
 - WhatsApp number already exists in the group chat
 
+
 ### Removing a User
 ```
 /remove [WhatsApp number]
@@ -29,11 +30,13 @@ Required Fields:
 
 <br>__Note:__ An administrator cannot remove himself/herself. An administrator also cannot remove a super administrator.
 
+
 ### List all Users
 ```
 /list
 ```
 A list of users in the group chat will be displayed in JSON format.
+
 
 ### Test Command
 Return a message that has first been translated to the target language and then back to the user's native language.
@@ -43,6 +46,7 @@ Return a message that has first been translated to the target language and then 
 Required Fields:
 - Language code - Target language code. More information can be found in the Languages.md file.
 - Test message - Test message
+
 
 ### Generate Statistics
 Option 1:
