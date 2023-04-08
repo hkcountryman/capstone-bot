@@ -31,8 +31,7 @@ consts.LIST = "/list"  # list all users
 consts.LANG = "/lang"  # set language for user
 consts.STATS = "/stats"  # get stats for user
 consts.LASTPOST = "/lastpost"  # get last post for user
-consts.TOTALSTATS = "/totalstats"
-
+consts.TOTALSTATS = "/totalstats"  # get total stats for all users
 
 # Roles for users in JSON file
 consts.USER = "user"  # can only execute test translation command
