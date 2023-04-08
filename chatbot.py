@@ -30,6 +30,7 @@ consts.ADMIN = "/admin"  # toggle admin vs. user role for user
 consts.LIST = "/list"  # list all users
 consts.LANG = "/lang"  # set language for user
 consts.STATS = "/stats"  # get stats for user
+consts.LASTPOST = "/lastpost"
 
 # Roles for users in JSON file
 consts.USER = "user"  # can only execute test translation command
@@ -76,7 +77,8 @@ class Chatbot:
         consts.ADMIN,
         consts.LIST,
         consts.LANG,
-        consts.STATS]
+        consts.STATS,
+        consts.LASTPOST]
     """All slash commands for the bot."""
 
     languages: LangData | None = None
@@ -413,6 +415,22 @@ class Chatbot:
             return f"User {target_contact} sent {message_count} messages."
         return f"User {target_contact} sent {message_count} messages."
 
+    def get_last_post_time(self, user_contact: str, target_user: str = None) -> str:
+        if target_user:
+            user_to_check = f"whatsapp:{target_user}"
+        else:
+            user_to_check = user_contact
+
+        if user_to_check not in self.logs:
+            return "User not found in logs."
+
+        timestamps = self.logs[user_to_check]["timestamps"]
+        if not timestamps:
+            return f"User {target_user} has not posted any messages yet."
+
+        last_post_time = max(timestamps, key=datetime.fromisoformat)
+        return f"Last post for user {user_to_check} was: {last_post_time}"
+
     def process_msg(
             self,
             msg: str,
@@ -474,6 +492,10 @@ class Chatbot:
                 case consts.STATS:
                     stats = self.generate_stats(sender_contact, msg)
                     return self._reply(stats)
+                
+                case consts.LASTPOST:  # Get the last post time for the user or specified target user
+                    target_user = msg.split()[1] if len(msg.split()) > 1 else None
+                    return self._reply(self.get_last_post_time(sender_contact, target_user))
 
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
