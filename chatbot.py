@@ -30,7 +30,9 @@ consts.ADMIN = "/admin"  # toggle admin vs. user role for user
 consts.LIST = "/list"  # list all users
 consts.LANG = "/lang"  # set language for user
 consts.STATS = "/stats"  # get stats for user
-consts.LASTPOST = "/lastpost"
+consts.LASTPOST = "/lastpost"  # get last post for user
+consts.TOTALSTATS = "/totalstats"
+
 
 # Roles for users in JSON file
 consts.USER = "user"  # can only execute test translation command
@@ -78,7 +80,8 @@ class Chatbot:
         consts.LIST,
         consts.LANG,
         consts.STATS,
-        consts.LASTPOST]
+        consts.LASTPOST,
+        consts.TOTALSTATS]
     """All slash commands for the bot."""
 
     languages: LangData | None = None
@@ -430,6 +433,50 @@ class Chatbot:
 
         last_post_time = max(timestamps, key=datetime.fromisoformat)
         return f"Last post for user {user_to_check} was: {last_post_time}"
+    
+    def generate_total_stats(self, sender_contact: str, msg: str) -> str:
+        """
+        Generate total message statistics for all users in a specified time frame.
+
+        Arguments:
+            sender_contact -- WhatsApp contact info of the sender
+            msg -- the message sent to the bot, containing the time frame for statistics
+
+        Returns:
+            A string containing the total message statistics or an error message
+                if the input is incorrect.
+        """
+        sender_lang = self.subscribers[sender_contact]["lang"]
+
+        split_msg = msg.split()
+        if len(split_msg) == 3:
+            days_str, unit = split_msg[1], split_msg[2]
+            time_frame = f"{days_str}{unit}"
+        else:
+            return Chatbot.languages.get_stats_usage_err(sender_lang)
+
+        # Check if the time frame is valid
+        pattern = r"(\d+)\s*(\w+)"
+        match = re.match(pattern, time_frame)
+        if match:
+            days, unit = int(match.group(1)), match.group(2)
+            if unit not in ("day", "days"):
+                return Chatbot.languages.get_stats_err(sender_lang)
+        else:
+            return Chatbot.languages.get_stats_err(sender_lang)
+
+        # Calculate the start and end dates
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+
+        total_message_count = 0
+        for contact_key in self.logs:
+            for timestamp_str in self.logs[contact_key]["timestamps"]:
+                timestamp = datetime.fromisoformat(timestamp_str)
+                if start_date <= timestamp <= end_date:
+                    total_message_count += 1
+
+        return f"Total messages sent by all users: {total_message_count}"
 
     def process_msg(
             self,
@@ -496,6 +543,10 @@ class Chatbot:
                 case consts.LASTPOST:  # Get the last post time for the user or specified target user
                     target_user = msg.split()[1] if len(msg.split()) > 1 else None
                     return self._reply(self.get_last_post_time(sender_contact, target_user))
+                
+                case consts.TOTALSTATS:
+                    total_stats = self.generate_total_stats(sender_contact, msg)
+                    return self._reply(total_stats)
 
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
