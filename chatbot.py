@@ -103,9 +103,9 @@ class Chatbot:
             auth_token: str,
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
+            backup_file: str = "bot_subscribers/backup.json",
             key_file: str = "json/key.key",
-            logs_file: str = "logs.json",
-            backup_file: str = "bot_subscribers/backup.json"):
+            logs_file: str = "logs.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -113,10 +113,16 @@ class Chatbot:
             auth_token -- Account auth token
             number -- Phone number the bot texts from, including country
                 extension
+
+        Keyword Arguments:
             json_file -- Path to a JSON file containing subscriber data
+                (default: {"bot_subscribers/team56test.json"})
             backup_file -- Path to a JSON file containing backup data for the
-                above JSON file
-            key_file -- Path to a file containing the encryption key
+                above JSON file (default: {"bot_subscribers/backup.json"})
+            key_file -- Path to a file containing the encryption key (default:
+                {"json/key.key"})
+            logs_file -- Path to a JSON file where chat timestamps are stored
+                (default: {"logs.json"})
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
@@ -654,14 +660,5 @@ TWILIO_ACCOUNT_SID: str = os.getenv(
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
-BACKUP_FILE: str = "bot_subscribers/backup.json"
-KEY_FILE: str = "json/key.key"
-mr_botty = Chatbot(
-    TWILIO_ACCOUNT_SID,
-    TWILIO_AUTH_TOKEN,
-    TWILIO_NUMBER,
-    SUBSCRIBER_FILE,
-    BACKUP_FILE,
-    KEY_FILE)
+mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 """Global Chatbot object, of which there could theoretically be many."""
