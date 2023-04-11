@@ -4,6 +4,9 @@ This is a basic Python script to be run to set-up the JSON file storing user
 data to be used for all of the included Chatbot functionality.
 """
 
+# TODO: Add log file. Make sure to do error handling, like if the file
+# already exists.
+
 import json
 import os
 import sys
@@ -18,6 +21,7 @@ RESET = "\033[0;0m"
 
 # File name
 JSON_FILE = "team56test.json"
+BACKUP_FILE = "backup.json"
 
 
 def usage():
@@ -33,9 +37,14 @@ print("Setting up user data file...\n")
 
 # Get superuser phone number
 sys.stdout.write(BOLD)
-print("Enter your WhatsApp phone number (include country code): ", end="")
+print("Enter your WhatsApp phone number (include country code with +; no other punctuation): ", end="")
 sys.stdout.write(RESET)
-phone_number = input()
+phone_number = ""
+# Checks for the '+' sign
+while not phone_number.startswith("+"):
+    phone_number = input()
+    if not phone_number[1:].isdigit():
+        phone_number = ""
 
 # Get superuser preferred language
 with open("languages.json", "r", encoding="utf-8") as file:
@@ -59,9 +68,15 @@ sys.stdout.write(RESET)
 while language not in [lang["code"] for lang in lang_json]:
     language = input()
 
-# Create super administrator
-user_dict = dict(
-    {"whatsapp:" + phone_number: {"lang": language, "role": "super"}})
+# Get superuser preferred display name
+sys.stdout.write(BOLD)
+print("\nEnter a display name (spaces will be removed): ", end="")
+sys.stdout.write(RESET)
+display_name = input().replace(" ", "")  # remove spaces
+
+# Create subscriber dictionary with superuser
+user_dict = dict({f"whatsapp:{phone_number}": {
+                 "lang": language, "name": display_name, "role": "super"}})
 
 # Create a key or Retrieve a key if file already exists
 if not os.path.isfile("json/key.key"):
@@ -78,6 +93,7 @@ user_list = json.dumps(user_dict, indent=4)
 user_list_byte = user_list.encode("utf-8")
 f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
+
 try:
     with open(f"bot_subscribers/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
@@ -88,6 +104,20 @@ except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
         f"\nA file under bot_subscribers/{JSON_FILE} already exists. " +
+        "Delete and try again.")
+    sys.stdout.write(RESET)
+    sys.exit(1)
+
+try:
+    with open(f"bot_subscribers/{BACKUP_FILE}", "xb") as file:
+        file.write(encrypted_data)
+    sys.stdout.write(BOLD + GREEN)
+    print(f"\nbot_subscribers/{BACKUP_FILE} created.")
+    sys.stdout.write(RESET)
+except FileExistsError:
+    sys.stdout.write(BOLD + RED)
+    print(
+        f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)

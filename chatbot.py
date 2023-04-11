@@ -5,14 +5,19 @@
 This module contains the class definition to create Chatbot objects, each of
 which can support one group of subscribers on WhatsApp. It also contains an
 instance of such a chatbot for import by the Flask app.
+
+Classes:
+    SubscribersInfo -- A TypedDict to describe a subscriber to the group chat
+    Chatbot -- A class to keep track of data about a group chat and its
+        associated WhatsApp bot
 """
 
 import json
 import os
+import re
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
-from datetime import datetime, timedelta
-import re
 
 import requests
 from cryptography.fernet import Fernet
@@ -22,6 +27,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from language_data import LangData, translate_to
 
 consts = SimpleNamespace()
+
 # Constant strings for bot commands
 consts.TEST = "/test"  # test translate
 consts.ADD = "/add"  # add user
@@ -39,6 +45,8 @@ consts.ADMIN = "admin"  # can execute all slash commands but cannot remove super
 consts.SUPER = "super"  # can execute all slash commands, no limits
 consts.VALID_ROLES = [consts.USER, consts.ADMIN, consts.SUPER]
 
+pm_char = "#"  # Example: #xX_bob_Xx Hey bob, this is a private message!
+
 
 class SubscribersInfo(TypedDict):
     """A TypedDict to describe a subscriber.
@@ -47,8 +55,9 @@ class SubscribersInfo(TypedDict):
     keys to which are to be strings of WhatsApp contact information of the form
     "whatsapp:<phone number with country code>".
     """
-    lang: str  # user"s preferred language code
-    role: str  # user"s privilege level, "user", "admin", or "super"
+    name: str  # user's display name
+    lang: str  # user's preferred language code
+    role: str  # user's privilege level, "user", "admin", or "super"
 
 
 class Chatbot:
@@ -64,12 +73,14 @@ class Chatbot:
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
         subscribers -- Dictionary containing the data loaded from the file
+        display_names -- Dictionary mapping display names to WhatsApp numbers
+            for subscribers
         twilio_account_sid -- Account SID for the Twilio account
         twilio_auth_token -- Twilio authorization token
-        twilio_number -- Bot"s registered Twilio number
+        twilio_number -- Bot's registered Twilio number
 
     Methods:
-        process_cmd -- Process a slash command and send a reply from the bot
+        process_msg -- Process a message to the bot
     """
     commands = [
         consts.TEST,
@@ -93,7 +104,8 @@ class Chatbot:
             number: str,
             json_file: str = "bot_subscribers/team56test.json",
             key_file: str = "json/key.key",
-            logs_file: str = "logs.json"):
+            logs_file: str = "logs.json",
+            backup_file: str = "bot_subscribers/backup.json"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -102,6 +114,8 @@ class Chatbot:
             number -- Phone number the bot texts from, including country
                 extension
             json_file -- Path to a JSON file containing subscriber data
+            backup_file -- Path to a JSON file containing backup data for the
+                above JSON file
             key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
@@ -109,29 +123,40 @@ class Chatbot:
         self.client = Client(account_sid, auth_token)
         self.number = number
         self.json_file = json_file
+        self.backup_file = backup_file
         self.key_file = key_file
         self.logs_file = logs_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
-
+        # TODO: Kevin, does this need to be encrypted and backed up?
         try:
-            with open(self.logs_file, "r") as file:
+            with open(self.logs_file, "r", encoding="utf-8") as file:
                 self.logs = json.load(file)
         except FileNotFoundError:
             self.logs = {}
-            with open(self.logs_file, "w") as file:
+            with open(self.logs_file, "w", encoding="utf-8") as file:
                 json.dump(self.logs, file)
-
         with open(self.json_file, "rb") as file:
             encrypted_data = file.read()
-        # Retrieve encryption key
         with open(self.key_file, "rb") as file:
-            self.key = file.read()
+            self.key = file.read()  # Retrieve encryption key
         f = Fernet(self.key)
-        unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
-        self.subscribers: Dict[str,
-                               SubscribersInfo] = json.loads(unencrypted_data)
+        try:
+            unencrypted_data = f.decrypt(encrypted_data).decode("utf-8")
+            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
+                unencrypted_data)
+        except BaseException:  # pylint: disable=broad-exception-caught
+            # Handle corrupted file
+            # TODO: Print message to super administrator that original file is
+            # corrupted...recent data may not have been saved.
+            with open(self.backup_file, "rb") as file:
+                backup_encrypted_data = file.read()
+            backup_unencrypted_data = f.decrypt(
+                backup_encrypted_data).decode("utf-8")
+            self.subscribers = json.loads(backup_unencrypted_data)
+        self.display_names: Dict[str, str] = {
+            v["name"]: k for k, v in self.subscribers.items()}
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -147,11 +172,7 @@ class Chatbot:
         msg.body(msg_body)
         return str(resp)
 
-    def _push(
-            self,
-            text: str,
-            sender: str,
-            media_urls: List[str]) -> str:
+    def _push(self, text: str, sender: str, media_urls: List[str]) -> str:
         """Push a translated message and media to one or more recipients.
 
         Arguments:
@@ -180,8 +201,50 @@ class Chatbot:
                     from_=f"whatsapp:{self.number}",
                     to=s,
                     body=translated,
-                    media_url=media_urls)  # Include media_urls in the message
+                    media_url=media_urls)
                 print(msg.sid)
+        return ""
+
+    # TODO: recipient should work as both username and phone number
+    def _query(
+            self,
+            msg: str,
+            sender: str,
+            sender_lang: str,
+            recipient: str,
+            media_urls: List[str]) -> str:
+        """Send a private message to a single recipient.
+
+        Arguments:
+            msg -- message contents
+            sender -- sender display name
+            sender_lang -- sender preferred language code
+            recipient -- recipient display name
+            media_urls -- any attached media URLs from Twilio's CDN
+
+        Returns:
+            An empty string to the sender, or else an error message if the
+                request to the LibreTranslate API times out or has some other
+                error.
+        """
+        # Check whether recipient exists
+        if recipient not in self.display_names:
+            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                sender_lang)
+        if not (msg == "" and len(media_urls) == 0):  # something to send
+            recipient_contact = self.display_names[recipient]
+            recipient_lang = self.subscribers[recipient_contact]["lang"]
+            text = f"Private message from {sender}:\n{msg}"
+            try:
+                translated = translate_to(text, recipient_lang)
+            except (TimeoutError, requests.HTTPError) as e:
+                return str(e)
+            pm = self.client.messages.create(
+                from_=f"whatsapp:{self.number}",
+                to=recipient_contact,
+                body=translated,
+                media_url=media_urls)
+            print(pm.sid)
         return ""
 
     def _test_translate(self, msg: str, sender: str) -> str:
@@ -215,7 +278,7 @@ class Chatbot:
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
 
-    def add_subscriber(self, msg: str, sender_contact: str) -> str:
+    def _add_subscriber(self, msg: str, sender_contact: str) -> str:
         """Add a new subscriber to the dictionary and save it to the JSON file.
 
         Arguments:
@@ -227,40 +290,45 @@ class Chatbot:
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
         sender_role = self.subscribers[sender_contact]["role"]
-
-        # Split the message into parts
         parts = msg.split()
-
-        # Check if there are enough arguments
-        if len(parts) == 4:
-            new_contact, new_lang, new_role = parts[1], parts[2], parts[3]
-
+        if len(parts) == 5:  # Check if there are enough arguments
+            new_contact = parts[1]
+            new_name = parts[2]
+            new_lang = parts[3]
+            new_role = parts[4]
             # Check if the sender has the authority to add the specified role
             if sender_role == consts.ADMIN and new_role == consts.SUPER:
                 return ""
-
-            # Check if the role is valid
-            if new_role not in consts.VALID_ROLES:
-                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
+            # Check if the phone number is valid
+            if (not new_contact.startswith("+")
+                ) or (not new_contact[1:].isdigit()):
+                return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
-
-            # Check if the language code is valid
-            if new_lang not in\
-                    Chatbot.languages.codes:  # type: ignore [union-attr]
-                return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
-                    sender_lang)
-
+            # start attempt to add contact
             new_contact_key = f"whatsapp:{new_contact}"
             # Check if the user already exists
             if new_contact_key in self.subscribers:
                 return Chatbot.languages.get_exists_err(  # type: ignore [union-attr]
                     sender_lang)
-
+            # Check if the display name is untaken
+            if new_name in self.display_names:
+                return Chatbot.languages.get_add_name_err(  # type: ignore [union-attr]
+                    sender_lang)
+            # Check if the language code is valid
+            if new_lang not in\
+                    Chatbot.languages.codes:  # type: ignore [union-attr]
+                return Chatbot.languages.get_add_lang_err(  # type: ignore [union-attr]
+                    sender_lang)
+            # Check if the role is valid
+            if new_role not in consts.VALID_ROLES:
+                return Chatbot.languages.get_add_role_err(  # type: ignore [union-attr]
+                    sender_lang)
             self.subscribers[new_contact_key] = {
+                "name": new_name,
                 "lang": new_lang,
                 "role": new_role
             }
-
+            self.display_names[new_name] = new_contact_key
             # Save the updated subscribers to team56test.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
@@ -270,16 +338,21 @@ class Chatbot:
             encrypted_data = f.encrypt(subscribers_list_byte)
             with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
-
+            # Copy data to backup file
+            with open(self.json_file, "rb") as fileone, \
+                    open(self.backup_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
+            # TODO: Add new user to the timestamp logs
         else:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
 
-    def remove_subscriber(self, msg: str, sender_contact: str) -> str:
-        """
-        Remove a subscriber from the dictionary and save the updated dictionary.
+    # TODO: user_contact should work as both username and phone number
+    def _remove_subscriber(self, msg: str, sender_contact: str) -> str:
+        """Remove a subscriber from the dictionary and save the dictionary.
 
         to the JSON file.
 
@@ -293,33 +366,27 @@ class Chatbot:
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
         sender_role = self.subscribers[sender_contact]["role"]
-
-        # Split the message into parts
         parts = msg.split()
-
-        # Check if there are enough arguments
-        if len(parts) == 2:
+        if len(parts) == 2:  # Check if there are enough arguments
             user_contact = parts[1]
             user_contact_key = f"whatsapp:{user_contact}"
-
             # Prevent sender from removing themselves
             if user_contact in sender_contact:
                 return Chatbot.languages.get_remove_self_err(  # type: ignore [union-attr]
                     sender_lang)
-
             # Check if the user exists
             if user_contact_key not in self.subscribers:
                 return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
                     sender_lang)
-
             # Check if the sender has the necessary privileges
             if sender_role == consts.ADMIN and self.subscribers[
                     user_contact_key]["role"] == consts.SUPER:
                 return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
                     sender_lang)
             else:
+                name = self.subscribers[user_contact_key]["name"]
+                del self.display_names[name]
                 del self.subscribers[user_contact_key]
-
             # Save the updated subscribers to team56test.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
@@ -329,46 +396,41 @@ class Chatbot:
             encrypted_data = f.encrypt(subscribers_list_byte)
             with open(self.json_file, "wb") as file:
                 file.write(encrypted_data)
-
+            # Copy data to backup file
+            with open(self.json_file, "rb") as fileone, \
+                    open(self.backup_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                 sender_lang)
+            # TODO: also remove subscriber's chat logs
         else:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
 
-    def store_message_timestamp(self, sender_contact: str, msg: str) -> None:
-        """
-        Store the timestamp of a message sent by a user if it's not a command.
+    def _store_message_timestamp(self, sender_contact: str, msg: str) -> None:
+        """Store the timestamp of a message sent by a user.
+
+        Do not count empty PMs or slash commands.
 
         Arguments:
             sender_contact -- WhatsApp contact info of the sender
             msg -- the message sent to the bot
-
-        Returns:
-            None
         """
-        # Check if the message is a command; if yes, do not count it
-        if len(msg) > 0 and msg.startswith("/"):
-            return
+        # Only proceed if message is not a command and is not an empty PM
+        if not msg.startswith("/") and not (msg.startswith(pm_char) and
+                                            len(msg.split()) <= 1):
+            timestamp = datetime.now().strftime("%Y-%m-%d")
+            if sender_contact in self.logs:  # sender is already in log file...
+                self.logs[sender_contact]["timestamps"].append(timestamp)
+            else:  # otherwise add them to logs before adding timestamp
+                self.logs[sender_contact] = {"timestamps": [timestamp]}
+            # TODO: Kevin, does this need to be encrypted or anything?
+            with open(self.logs_file, "w", encoding="utf-8") as file:
+                json.dump(self.logs, file, indent=2)
 
-        timestamp = datetime.now().strftime("%Y-%m-%d")
-
-        # Add the timestamp to the logs
-        if sender_contact in self.logs:
-            self.logs[sender_contact]["timestamps"].append(timestamp)
-        else:
-            self.logs[sender_contact] = {"timestamps": [timestamp]}
-
-        # Save the updated logs to the logs.json file
-        with open(self.logs_file, "w") as file:
-            json.dump(self.logs, file, indent=2)
-
-    def generate_stats(
-            self,
-            sender_contact: str,
-            msg: str) -> str:
-        """
-        Generate message statistics for a specified user and time frame.
+    def _generate_stats(self, sender_contact: str, msg: str) -> str:
+        """Generate message statistics for a specified user and time frame.
 
         Arguments:
             sender_contact -- WhatsApp contact info of the sender
@@ -380,115 +442,131 @@ class Chatbot:
                 if the input is incorrect or the user is not found.
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
-
-        split_msg = msg.split()
+        split_msg = msg.split()  # Check if there are enough arguments
         if len(split_msg) == 4:
-            target_contact, days_str, unit = split_msg[1], split_msg[2], split_msg[3]
+            target_contact = split_msg[1]
+            days_str = split_msg[2]
+            unit = split_msg[3]
             time_frame = f"{days_str}{unit}"
         else:
-            return Chatbot.languages.get_stats_usage_err(sender_lang)
-
-        target_contact_key = f"whatsapp:{target_contact}"
-
+            return Chatbot.languages.get_stats_usage_err(  # type: ignore [union-attr]
+                sender_lang)
+        target_contact_key = f"whatsapp:{target_contact}"  # specified user
         if target_contact_key not in self.subscribers:
-            return Chatbot.languages.get_unfound_err(sender_lang)
-
+            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                sender_lang)
         # Check if the time frame is valid
         pattern = r"(\d+)\s*(\w+)"
         match = re.match(pattern, time_frame)
         if match:
             days, unit = int(match.group(1)), match.group(2)
             if unit not in ("day", "days"):
-                return Chatbot.languages.get_stats_err(sender_lang)
+                return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
+                    sender_lang)
         else:
-            return Chatbot.languages.get_stats_err(sender_lang)
-
+            return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
+                sender_lang)
         # Calculate the start and end dates
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-
+        # Tally timestamps
         message_count = 0
         for timestamp_str in self.logs[target_contact_key]["timestamps"]:
             timestamp = datetime.fromisoformat(timestamp_str)
             if start_date <= timestamp <= end_date:
                 message_count += 1
-
-        if message_count == 0:
-            return f"User {target_contact} sent {message_count} messages."
+        # TODO: convert to a translated success message
         return f"User {target_contact} sent {message_count} messages."
 
-    def get_last_post_time(self, user_contact: str, target_user: str = None) -> str:
-        if target_user:
+    # TODO: target_user should work as both username and phone number
+    def _get_last_post_time(
+            self,
+            user_contact: str,
+            target_user: str = "") -> str:
+        """Get the latest post's timestamp for a user.
+
+        Arguments:
+            user_contact -- the WhatsApp contact info of the user making this
+                request (if target_user is not provided, check timestamp for
+                this user)
+
+        Keyword Arguments:
+            target_user -- a user to get a timestamp for (default: {""})
+
+        Returns:
+            the date that the user in question last sent a message.
+        """
+        sender_lang = self.subscribers[user_contact]["lang"]
+        if target_user != "":
             user_to_check = f"whatsapp:{target_user}"
         else:
             user_to_check = user_contact
-
         if user_to_check not in self.logs:
-            return "User not found in logs."
-
+            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                sender_lang)
         timestamps = self.logs[user_to_check]["timestamps"]
         if not timestamps:
+            # TODO: convert to a translated error
             return f"User {target_user} has not posted any messages yet."
-
         last_post_time = max(timestamps, key=datetime.fromisoformat)
+        # TODO: convert to a translated success message
         return f"Last post for user {user_to_check} was: {last_post_time}"
-    
-    def generate_total_stats(self, sender_contact: str, msg: str) -> str:
-        """
-        Generate total message statistics for all users in a specified time frame.
+
+    def _generate_total_stats(self, sender_contact: str, msg: str) -> str:
+        """Generate message statistics for all users in a specified time frame.
 
         Arguments:
             sender_contact -- WhatsApp contact info of the sender
-            msg -- the message sent to the bot, containing the time frame for statistics
+            msg -- the message sent to the bot, containing the time frame for
+                statistics
 
         Returns:
             A string containing the total message statistics or an error message
                 if the input is incorrect.
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
-
         split_msg = msg.split()
         if len(split_msg) == 3:
-            days_str, unit = split_msg[1], split_msg[2]
+            days_str = split_msg[1]
+            unit = split_msg[2]
             time_frame = f"{days_str}{unit}"
         else:
-            return Chatbot.languages.get_stats_usage_err(sender_lang)
-
+            return Chatbot.languages.get_stats_usage_err(  # type: ignore [union-attr]
+                sender_lang)
         # Check if the time frame is valid
         pattern = r"(\d+)\s*(\w+)"
         match = re.match(pattern, time_frame)
         if match:
             days, unit = int(match.group(1)), match.group(2)
             if unit not in ("day", "days"):
-                return Chatbot.languages.get_stats_err(sender_lang)
+                return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
+                    sender_lang)
         else:
-            return Chatbot.languages.get_stats_err(sender_lang)
-
+            return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
+                sender_lang)
         # Calculate the start and end dates
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-
+        # Tally total messages
         total_message_count = 0
         for contact_key in self.logs:
             for timestamp_str in self.logs[contact_key]["timestamps"]:
                 timestamp = datetime.fromisoformat(timestamp_str)
                 if start_date <= timestamp <= end_date:
                     total_message_count += 1
-
+        # TODO: convert to translated success message
         return f"Total messages sent by all users: {total_message_count}"
 
     def process_msg(
             self,
             msg: str,
             sender_contact: str,
-            sender_name: str,
             media_urls: List[str]) -> str:
         """Process a bot command.
 
         Arguments:
             msg -- the message sent to the bot
             sender_contact -- the WhatsApp contact info of the sender
-            sender_name -- the WhatsApp profile name of the sender
             media_urls -- a list of media URLs sent with the message, if any
 
         Returns:
@@ -496,18 +574,34 @@ class Chatbot:
         """
         try:
             sender = self.subscribers[sender_contact]
+            sender_name = sender["name"]
             role = sender["role"]
+            sender_lang = sender["lang"]
         except KeyError:
-            return ""  # ignore; they aren"t subscribed
-
-        self.store_message_timestamp(sender_contact, msg)
-        
-        if not msg and len(media_urls) == 0:
+            return ""  # ignore; they aren't subscribed
+        if msg == "" and len(media_urls) == 0:
             return ""  # ignore; nothing to send
 
-        word_1 = msg.split()[0].lower() if msg else ""
+        # Store the timestamp if applicable
+        self._store_message_timestamp(sender_contact, msg)
 
-        if role == consts.USER:
+        # first word in message
+        word_1 = msg.split()[0].lower() if msg != "" else ""
+
+        # PM someone:
+        if word_1[0:1] == pm_char:
+            split = msg.split()  # don't convert first word to lowercase
+            pm_name = split[0][1:]  # display name without PM character
+            return self._reply(
+                self._query(
+                    " ".join(split[1:]),
+                    sender_name,
+                    sender_lang,
+                    pm_name,
+                    media_urls))
+
+        # Message group or /test as user:
+        elif role == consts.USER:
             if word_1 == consts.TEST:  # test translate
                 return self._reply(self._test_translate(msg, sender_contact))
             elif word_1[0:1] == "/" and len(word_1) > 1:
@@ -516,6 +610,8 @@ class Chatbot:
                 text = sender_name + " says:\n" + msg
                 self._push(text, sender_contact, media_urls)
                 return ""  # say nothing to sender
+
+        # Message group or perform any slash command as admin or superuser:
         else:
             match word_1:
                 case consts.TEST:  # test translate
@@ -523,30 +619,29 @@ class Chatbot:
                         self._test_translate(
                             msg, sender_contact))
                 case consts.ADD:  # add user to subscribers
-                    # Call the add_subscriber method and return its response
                     return self._reply(
-                        self.add_subscriber(
+                        self._add_subscriber(
                             msg, sender_contact))
                 case consts.REMOVE:  # remove user from subscribers
                     return self._reply(
-                        self.remove_subscriber(
+                        self._remove_subscriber(
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
-                    subscribers = json.dumps(self.subscribers, indent=2)
-                    return self._reply(f"List of subscribers:\n{subscribers}")
-
+                    # TODO: make tabular
+                    return self._reply(json.dumps(self.subscribers, indent=2))
                 case consts.STATS:
-                    stats = self.generate_stats(sender_contact, msg)
+                    stats = self._generate_stats(sender_contact, msg)
                     return self._reply(stats)
-                
-                case consts.LASTPOST:  # Get the last post time for the user or specified target user
-                    target_user = msg.split()[1] if len(msg.split()) > 1 else None
-                    return self._reply(self.get_last_post_time(sender_contact, target_user))
-                
+                case consts.LASTPOST:  # get last post time for user
+                    target_user = msg.split()[1] if len(
+                        msg.split()) > 1 else ""
+                    return self._reply(
+                        self._get_last_post_time(
+                            sender_contact, target_user))
                 case consts.TOTALSTATS:
-                    total_stats = self.generate_total_stats(sender_contact, msg)
+                    total_stats = self._generate_total_stats(
+                        sender_contact, msg)
                     return self._reply(total_stats)
-
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
@@ -560,11 +655,13 @@ TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
 SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+BACKUP_FILE: str = "bot_subscribers/backup.json"
 KEY_FILE: str = "json/key.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
     SUBSCRIBER_FILE,
+    BACKUP_FILE,
     KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""
