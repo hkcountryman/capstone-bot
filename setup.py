@@ -17,8 +17,10 @@ BOLD = "\033[;1m"
 RESET = "\033[0;0m"
 
 # File name
-JSON_FILE = "team56test.json"
+JSON_FILE = "subscribers.json"
 BACKUP_FILE = "backup.json"
+LOGS_FILE = "logs.json"
+BACKUP_LOGS_FILE = "backup_logs.json"
 
 
 def usage():
@@ -75,7 +77,7 @@ display_name = input().replace(" ", "")  # remove spaces
 user_dict = dict({f"whatsapp:{phone_number}": {
                  "lang": language, "name": display_name, "role": "super"}})
 
-# Create a key or Retrieve a key if file already exists
+# Create a key or Retrieve a key if file already exists for user data
 if not os.path.isfile("json/key.key"):
     key = Fernet.generate_key()
     with open("json/key.key", "xb") as file:
@@ -115,6 +117,51 @@ except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
         f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
+        "Delete and try again.")
+    sys.stdout.write(RESET)
+    sys.exit(1)
+
+# Create a key or Retrieve a key if file already exists for logs data
+if not os.path.isfile("json/key2.key"):
+    key2 = Fernet.generate_key()
+    with open("json/key2.key", "xb") as file:
+        file.write(key2)
+else:
+    with open("json/key2.key", "rb") as file:
+        key2 = file.read()
+
+# Create logs file
+logs_dict = dict({f"whatsapp:{phone_number}": {"timestamps": []}})
+logs_list = json.dumps(logs_dict, indent=4)
+# Create byte version of JSON string
+logs_list_byte = logs_list.encode("utf-8")
+f = Fernet(key2)
+logs_encrypted_data = f.encrypt(logs_list_byte)
+
+try:
+    with open(f"json/{LOGS_FILE}", "xb") as file:
+        file.write(logs_encrypted_data)
+    sys.stdout.write(BOLD + GREEN)
+    print(f"\njson/{LOGS_FILE} created.")
+    sys.stdout.write(RESET)
+except FileExistsError:
+    sys.stdout.write(BOLD + RED)
+    print(
+        f"\nA file under json/{LOGS_FILE} already exists. " +
+        "Delete and try again.")
+    sys.stdout.write(RESET)
+    sys.exit(1)
+
+try:
+    with open(f"json/{BACKUP_LOGS_FILE}", "xb") as file:
+        file.write(logs_encrypted_data)
+    sys.stdout.write(BOLD + GREEN)
+    print(f"\njson/{BACKUP_LOGS_FILE} created.")
+    sys.stdout.write(RESET)
+except FileExistsError:
+    sys.stdout.write(BOLD + RED)
+    print(
+        f"\nA file under json/{BACKUP_LOGS_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)

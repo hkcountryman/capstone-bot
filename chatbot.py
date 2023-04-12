@@ -92,9 +92,12 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json",
+            json_file: str = "bot_subscribers/subscribers.json",
             backup_file: str = "bot_subscribers/backup.json",
-            key_file: str = "json/key.key"):
+            key_file: str = "json/key.key",
+            logs_file: str = "json/logs.json",
+            backup_logs_file: str = "json/backup_logs.json",
+            logs_key_file: str = "json/key2.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -106,6 +109,10 @@ class Chatbot:
             backup_file -- Path to a JSON file containing backup data for the
                 above JSON file
             key_file -- Path to a file containing the encryption key
+            logs_file -- Path to a JSON file containing logs data
+            backup_logs_file -- Path to a JSON file containing backup data for the
+                above JSON file
+            logs_key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
@@ -114,6 +121,9 @@ class Chatbot:
         self.json_file = json_file
         self.backup_file = backup_file
         self.key_file = key_file
+        self.logs_file = logs_file
+        self.backup_logs_file = backup_logs_file
+        self.logs_key_file = logs_key_file
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
@@ -127,15 +137,36 @@ class Chatbot:
             self.subscribers: Dict[str, SubscribersInfo] = json.loads(
                 unencrypted_data)
         except BaseException:  # Handle corrupted file
-            # TODO: Print message to super administrator that original file is
+            # TODO: Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
             with open(self.backup_file, "rb") as file:
                 backup_encrypted_data = file.read()
             backup_unencrypted_data = f.decrypt(
                 backup_encrypted_data).decode("utf-8")
-            self.subscribers = json.loads(backup_unencrypted_data)
+            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
+                backup_unencrypted_data)
         self.display_names: Dict[str, str] = {
             v["name"]: k for k, v in self.subscribers.items()}
+
+        with open(self.logs_file, "rb") as file:
+            encrypted_logs_data = file.read()
+        with open(self.logs_key_file, "rb") as file:
+            self.key2 = file.read()  # Retrieve encryption key
+        f = Fernet(self.key2)
+        try:
+            unencrypted_logs_data = f.decrypt(
+                encrypted_logs_data).decode("utf-8")
+            # TODO: Put unecrypted data into dictionary
+            self.logs = json.loads(unencrypted_logs_data)
+        except BaseException:  # Handle corrupted file
+            # TODO: Print message to server logs file that original file is
+            # corrupted...recent data may not have been saved.
+            with open(self.backup_logs_file, "rb") as file:
+                backup_encrypted_logs_data = file.read()
+            backup_unencrypted_logs_data = f.decrypt(
+                backup_encrypted_logs_data).decode("utf-8")
+            # TODO: Put unecrypted data into dictionary
+            self.logs = json.loads(backup_unencrypted_logs_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -284,7 +315,7 @@ class Chatbot:
 
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                    ) or (not new_contact[1:].isdigit()):
+                ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
 
@@ -317,7 +348,7 @@ class Chatbot:
             }
             self.display_names[new_name] = new_contact_key
 
-            # Save the updated subscribers to team56test.json
+            # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
@@ -385,7 +416,7 @@ class Chatbot:
                 del self.display_names[name]
                 del self.subscribers[user_contact_key]
 
-            # Save the updated subscribers to team56test.json
+            # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
@@ -487,14 +518,20 @@ TWILIO_ACCOUNT_SID: str = os.getenv(
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-SUBSCRIBER_FILE: str = "bot_subscribers/team56test.json"
+SUBSCRIBER_FILE: str = "bot_subscribers/subscribers.json"
 BACKUP_FILE: str = "bot_subscribers/backup.json"
 KEY_FILE: str = "json/key.key"
+LOGS_FILE: str = "json/logs.json"
+BACKUP_LOGS_FILE: str = "json/backup_logs.json"
+LOGS_KEY_FILE: str = "json/key2.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
     SUBSCRIBER_FILE,
     BACKUP_FILE,
-    KEY_FILE)
+    KEY_FILE,
+    LOGS_FILE,
+    BACKUP_LOGS_FILE,
+    LOGS_KEY_FILE)
 """Global Chatbot object, of which there could theoretically be many."""
