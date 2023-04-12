@@ -92,12 +92,12 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/subscribers.json",
-            backup_file: str = "bot_subscribers/backup.json",
-            key_file: str = "json/key.key",
-            logs_file: str = "json/logs.json",
-            backup_logs_file: str = "json/backup_logs.json",
-            logs_key_file: str = "json/key2.key"):
+            json_file: str = "subscribers.json",
+            backup_file: str = "subscribers_bak.json",
+            key_file: str = "subscribers_key.key",
+            logs_file: str = "logs.json",
+            backup_logs_file: str = "logs_bak.json",
+            logs_key_file: str = "logs_key.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -114,16 +114,18 @@ class Chatbot:
                 above JSON file
             logs_key_file -- Path to a file containing the encryption key
         """
+        # TODO: above needs to be changed to the doc style currently in the 260
+        # branch (note key word args)
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
-        self.json_file = json_file
-        self.backup_file = backup_file
-        self.key_file = key_file
-        self.logs_file = logs_file
-        self.backup_logs_file = backup_logs_file
-        self.logs_key_file = logs_key_file
+        self.json_file = f"json/{json_file}"
+        self.backup_file = f"json/{backup_file}"
+        self.key_file = f"json/{key_file}"
+        self.logs_file = f"json/{logs_file}"
+        self.backup_logs_file = f"json/{backup_logs_file}"
+        self.logs_key_file = f"json/{logs_key_file}"
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
@@ -143,8 +145,7 @@ class Chatbot:
                 backup_encrypted_data = file.read()
             backup_unencrypted_data = f.decrypt(
                 backup_encrypted_data).decode("utf-8")
-            self.subscribers: Dict[str, SubscribersInfo] = json.loads(
-                backup_unencrypted_data)
+            self.subscribers = json.loads(backup_unencrypted_data)
         self.display_names: Dict[str, str] = {
             v["name"]: k for k, v in self.subscribers.items()}
 
@@ -513,25 +514,14 @@ class Chatbot:
                     return self._push(text, sender_contact, media_urls)
 
 
+# Create bot (keyword args not provided because they have defaults)
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-SUBSCRIBER_FILE: str = "bot_subscribers/subscribers.json"
-BACKUP_FILE: str = "bot_subscribers/backup.json"
-KEY_FILE: str = "json/key.key"
-LOGS_FILE: str = "json/logs.json"
-BACKUP_LOGS_FILE: str = "json/backup_logs.json"
-LOGS_KEY_FILE: str = "json/key2.key"
 mr_botty = Chatbot(
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
-    TWILIO_NUMBER,
-    SUBSCRIBER_FILE,
-    BACKUP_FILE,
-    KEY_FILE,
-    LOGS_FILE,
-    BACKUP_LOGS_FILE,
-    LOGS_KEY_FILE)
+    TWILIO_NUMBER)
 """Global Chatbot object, of which there could theoretically be many."""

@@ -7,6 +7,7 @@ data to be used for all of the included Chatbot functionality.
 import json
 import os
 import sys
+from typing import Dict, List
 
 from cryptography.fernet import Fernet  # type: ignore [import]
 
@@ -16,20 +17,14 @@ GREEN = "\033[1;32m"
 BOLD = "\033[;1m"
 RESET = "\033[0;0m"
 
-# File name
+# File names
+JSON_DIR = "json"
 JSON_FILE = "subscribers.json"
-BACKUP_FILE = "backup.json"
+BACKUP_FILE = "subscribers_bak.json"
+KEY_FILE = "subscribers_key.key"
 LOGS_FILE = "logs.json"
-BACKUP_LOGS_FILE = "backup_logs.json"
-
-
-def usage():
-    """Print a usage statement."""
-    print("USAGE:")
-    sys.stdout.write(BOLD)
-    print(f"    {sys.argv[0]}", end="")
-    sys.stdout.write(RESET)
-    print(" [JSON file name]")
+BACKUP_LOGS_FILE = "logs_bak.json"
+LOGS_KEY_FILE = "logs_key.key"
 
 
 print("Setting up user data file...\n")
@@ -77,13 +72,17 @@ display_name = input().replace(" ", "")  # remove spaces
 user_dict = dict({f"whatsapp:{phone_number}": {
                  "lang": language, "name": display_name, "role": "super"}})
 
-# Create a key or Retrieve a key if file already exists for user data
-if not os.path.isfile("json/key.key"):
+# Look for json directory and create if needed
+if not os.path.exists(f"{JSON_DIR}/"):
+    os.makedirs(f"{JSON_DIR}/")
+
+# Create a key or retrieve a key if file already exists for user data
+if not os.path.isfile(f"{JSON_DIR}/{KEY_FILE}"):
     key = Fernet.generate_key()
-    with open("json/key.key", "xb") as file:
+    with open(f"{JSON_DIR}/{KEY_FILE}", "xb") as file:
         file.write(key)
 else:
-    with open("json/key.key", "rb") as file:
+    with open(f"{JSON_DIR}/{KEY_FILE}", "rb") as file:
         key = file.read()
 
 # Create super administrator
@@ -94,44 +93,46 @@ f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
 
 try:
-    with open(f"bot_subscribers/{JSON_FILE}", "xb") as file:
+    with open(f"{JSON_DIR}/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\nbot_subscribers/{JSON_FILE} created.")
+    print(f"{JSON_DIR}/{JSON_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under bot_subscribers/{JSON_FILE} already exists. " +
-        "Delete and try again.")
+        f"\nA file under {JSON_DIR}/{JSON_FILE} already exists. " +
+        "Delete and try again if you're certain.")
     sys.stdout.write(RESET)
     sys.exit(1)
 
 try:
-    with open(f"bot_subscribers/{BACKUP_FILE}", "xb") as file:
+    with open(f"{JSON_DIR}/{BACKUP_FILE}", "xb") as file:
         file.write(encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\nbot_subscribers/{BACKUP_FILE} created.")
+    print(f"{JSON_DIR}/{BACKUP_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
         f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
-        "Delete and try again.")
+        "Delete and try again if you're certain.")
     sys.stdout.write(RESET)
     sys.exit(1)
 
 # Create a key or Retrieve a key if file already exists for logs data
-if not os.path.isfile("json/key2.key"):
+if not os.path.isfile(f"{JSON_DIR}/{LOGS_KEY_FILE}"):
     key2 = Fernet.generate_key()
-    with open("json/key2.key", "xb") as file:
+    with open(f"{JSON_DIR}/{LOGS_KEY_FILE}", "xb") as file:
         file.write(key2)
 else:
-    with open("json/key2.key", "rb") as file:
+    with open(f"{JSON_DIR}/{LOGS_KEY_FILE}", "rb") as file:
         key2 = file.read()
 
 # Create logs file
-logs_dict = dict({f"whatsapp:{phone_number}": {"timestamps": []}})
+# TODO: update to new format
+logs_dict: Dict[str, Dict[str, List[str]]] = dict(
+    {f"whatsapp:{phone_number}": {"timestamps": []}})
 logs_list = json.dumps(logs_dict, indent=4)
 # Create byte version of JSON string
 logs_list_byte = logs_list.encode("utf-8")
@@ -139,29 +140,29 @@ f = Fernet(key2)
 logs_encrypted_data = f.encrypt(logs_list_byte)
 
 try:
-    with open(f"json/{LOGS_FILE}", "xb") as file:
+    with open(f"{JSON_DIR}/{LOGS_FILE}", "xb") as file:
         file.write(logs_encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\njson/{LOGS_FILE} created.")
+    print(f"{JSON_DIR}/{LOGS_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under json/{LOGS_FILE} already exists. " +
+        f"\nA file under {JSON_DIR}/{LOGS_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
 
 try:
-    with open(f"json/{BACKUP_LOGS_FILE}", "xb") as file:
+    with open(f"{JSON_DIR}/{BACKUP_LOGS_FILE}", "xb") as file:
         file.write(logs_encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\njson/{BACKUP_LOGS_FILE} created.")
+    print(f"{JSON_DIR}/{BACKUP_LOGS_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under json/{BACKUP_LOGS_FILE} already exists. " +
+        f"\nA file under {JSON_DIR}/{BACKUP_LOGS_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
