@@ -158,7 +158,7 @@ class LangData:
                 res = requests.get(
                     f"{consts.MIRRORS[idx]}languages",
                     timeout=consts.TIMEOUT)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 idx = idx + 1
         if res is not None and res.status_code == 200:
             languages = res.json()
@@ -284,7 +284,7 @@ class LangData:
                 self.entries[code]["test_example"] = self._get_lang_err(
                     code) + self._get_example(code) + err_msgs.test_example + \
                     "\n\n" + self._get_lang_list(code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.lang_err + err_msgs.example + \
@@ -307,7 +307,7 @@ class LangData:
                 self.entries[code]["add_example"] = self._get_lang_err(
                     code) + self._get_example(code) + err_msgs.add_example + \
                     "\n\n" + self._get_lang_list(code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.lang_err + err_msgs.example + \
@@ -327,7 +327,7 @@ class LangData:
             try:
                 self.entries[code]["add_phone_err"] = translate_to(
                     err_msgs.add_phone_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.add_phone_err
@@ -346,7 +346,7 @@ class LangData:
             try:
                 self.entries[code]["add_name_err"] = translate_to(
                     err_msgs.add_name_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.add_name_err
@@ -387,7 +387,7 @@ class LangData:
                 self.entries[code]["add_role_err"] = self._get_role_err(
                     code) + err_msgs.roles + "\n" + self._get_example(code) + \
                     err_msgs.add_example
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.role_err + err_msgs.roles + "\n" + \
@@ -407,7 +407,7 @@ class LangData:
             try:
                 self.entries[code]["exists_err"] = translate_to(
                     err_msgs.exists_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.exists_err
@@ -426,7 +426,7 @@ class LangData:
             try:
                 self.entries[code]["add_example"] = self._get_example(code) + \
                     err_msgs.add_example
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.example + err_msgs.add_example
@@ -445,7 +445,7 @@ class LangData:
             try:
                 self.entries[code]["added"] = translate_to(
                     success.added, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the message at the moment, compromise
                 # and return it in English
                 return success.added
@@ -466,7 +466,7 @@ class LangData:
             try:
                 self.entries[code]["unfound_err"] = translate_to(
                     err_msgs.unfound_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.unfound_err
@@ -485,7 +485,7 @@ class LangData:
             try:
                 self.entries[code]["remove_example"] = self._get_example(
                     code) + err_msgs.remove_example
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.example + err_msgs.remove_example
@@ -504,7 +504,7 @@ class LangData:
             try:
                 self.entries[code]["remove_self_err"] = translate_to(
                     err_msgs.remove_self_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.remove_self_err
@@ -523,7 +523,7 @@ class LangData:
             try:
                 self.entries[code]["remove_super_err"] = translate_to(
                     err_msgs.remove_super_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.remove_super_err
@@ -542,7 +542,7 @@ class LangData:
             try:
                 self.entries[code]["removed"] = translate_to(
                     success.removed, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the message at the moment, compromise
                 # and return it in English
                 return success.removed
@@ -563,7 +563,7 @@ class LangData:
             try:
                 self.entries[code]["stats_err"] = translate_to(
                     err_msgs.stats_err, code)
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.stats_err
@@ -582,7 +582,7 @@ class LangData:
             try:
                 self.entries[code]["stats_usage_err"] = self._get_example(
                     code) + err_msgs.stats_usage_err
-            except (TimeoutError, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.stats_usage_err
@@ -614,7 +614,7 @@ def translate_to(text: str, target_lang: str) -> str:
                 consts.MIRRORS[idx],
                 data=payload,
                 timeout=consts.TIMEOUT)
-        except TimeoutError:
+        except (TimeoutError, requests.ReadTimeout):
             idx = idx + 1
     if res is None:  # ran out of mirrors to try
         raise TimeoutError("Translation timed out for all mirrors")
