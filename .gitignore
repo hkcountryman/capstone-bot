@@ -132,5 +132,5 @@ dmypy.json
 .vscode/
 **/.DS_Store
 start.sh
-bot_subscribers/*
+json/*
 logs.json

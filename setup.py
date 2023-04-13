@@ -20,7 +20,7 @@ BOLD = "\033[;1m"
 RESET = "\033[0;0m"
 
 # File name
-JSON_FILE = "team56test.json"
+JSON_FILE = "subscribers.json"
 BACKUP_FILE = "backup.json"
 
 
@@ -95,29 +95,29 @@ f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
 
 try:
-    with open(f"bot_subscribers/{JSON_FILE}", "xb") as file:
+    with open(f"json/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\nbot_subscribers/{JSON_FILE} created.")
+    print(f"\njson/{JSON_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under bot_subscribers/{JSON_FILE} already exists. " +
+        f"\nA file under json/{JSON_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
 
 try:
-    with open(f"bot_subscribers/{BACKUP_FILE}", "xb") as file:
+    with open(f"json/{BACKUP_FILE}", "xb") as file:
         file.write(encrypted_data)
     sys.stdout.write(BOLD + GREEN)
-    print(f"\nbot_subscribers/{BACKUP_FILE} created.")
+    print(f"\njson/{BACKUP_FILE} created.")
     sys.stdout.write(RESET)
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
+        f"\nA file under json/{BACKUP_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)

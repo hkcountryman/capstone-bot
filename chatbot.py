@@ -102,8 +102,8 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json",
-            backup_file: str = "bot_subscribers/backup.json",
+            json_file: str = "json/team56test.json",
+            backup_file: str = "json/backup.json",
             key_file: str = "json/key.key",
             logs_file: str = "logs.json"):
         """Create the ChatBot object and populate class members as needed.
@@ -116,9 +116,9 @@ class Chatbot:
 
         Keyword Arguments:
             json_file -- Path to a JSON file containing subscriber data
-                (default: {"bot_subscribers/team56test.json"})
+                (default: {"json/team56test.json"})
             backup_file -- Path to a JSON file containing backup data for the
-                above JSON file (default: {"bot_subscribers/backup.json"})
+                above JSON file (default: {"json/backup.json"})
             key_file -- Path to a file containing the encryption key (default:
                 {"json/key.key"})
             logs_file -- Path to a JSON file where chat timestamps are stored
@@ -489,7 +489,7 @@ class Chatbot:
             self,
             user_contact: str,
             target_user: str = "") -> str:
-        """Get the latest post's timestamp for a user or all users if no user specified.
+        """Get the latest post's timestamp for one or all users.
 
         Arguments:
             user_contact -- the WhatsApp contact info of the user making this
@@ -506,18 +506,22 @@ class Chatbot:
         target_user = target_user.strip().lower()
 
         if target_user != "":
-            # Check if target_user is a name, then get the corresponding phone number
+            # Check if target_user is a name, then get the corresponding phone
+            # number
             for contact, user_info in self.subscribers.items():
-                if user_info["name"].lower() == target_user or contact.split(":")[1].lower() == target_user:
+                if user_info["name"].lower() == target_user or \
+                        contact.split(":")[1].lower() == target_user:
                     target_user = contact.split(":")[1]
                     target_name = user_info["name"]
                     break
             else:
-                return Chatbot.languages.get_unfound_err(sender_lang)
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
 
             user_to_check = f"whatsapp:{target_user}"
             if user_to_check not in self.logs:
-                return Chatbot.languages.get_unfound_err(sender_lang)
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
             timestamps = self.logs[user_to_check]["timestamps"]
             if not timestamps:
                 # TODO: convert to a translated error
@@ -530,13 +534,17 @@ class Chatbot:
             for user in self.logs:
                 timestamps = self.logs[user]["timestamps"]
                 if timestamps:
-                    last_post_time = max(timestamps, key=datetime.fromisoformat)
+                    last_post_time = max(
+                        timestamps, key=datetime.fromisoformat)
                     last_posts[user] = last_post_time
             if not last_posts:
                 # TODO: convert to a translated error
                 return "No messages have been posted yet."
             # TODO: convert to a translated success message
-            last_post_messages = "\n".join([f"{self.subscribers[user]['name']} ({user.split(':')[1]}): {timestamp}" for user, timestamp in last_posts.items()])
+            last_post_messages = "\n".join(
+                [
+                    f"{self.subscribers[user]['name']} ({user.split(':')[1]}): {timestamp}" for user,
+                    timestamp in last_posts.items()])
             return f"Last post for all users:\n{last_post_messages}"
 
     def _generate_total_stats(self, sender_contact: str, msg: str) -> str:
@@ -588,9 +596,9 @@ class Chatbot:
         """Generate a formatted list of subscribers with their data.
 
         Returns:
-            A formatted string representing the list of subscribers, including their
-            name, phone number, language, and role. If there are no subscribers, a
-            message indicating this will be returned.
+            A formatted string representing the list of subscribers, including
+            their name, phone number, language, and role. If there are no
+            subscribers, a message indicating this will be returned.
         """
         # Check if there are any subscribers
         # TODO: convert to a translated error message
@@ -612,7 +620,6 @@ class Chatbot:
 
         # Return the formatted list of subscribers
         return formatted_list
-
 
     def process_msg(
             self,
