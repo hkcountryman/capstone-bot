@@ -489,7 +489,7 @@ class Chatbot:
             self,
             user_contact: str,
             target_user: str = "") -> str:
-        """Get the latest post's timestamp for a user.
+        """Get the latest post's timestamp for a user or all users if no user specified.
 
         Arguments:
             user_contact -- the WhatsApp contact info of the user making this
@@ -503,20 +503,41 @@ class Chatbot:
             the date that the user in question last sent a message.
         """
         sender_lang = self.subscribers[user_contact]["lang"]
+        target_user = target_user.strip().lower()
+
         if target_user != "":
+            # Check if target_user is a name, then get the corresponding phone number
+            for contact, user_info in self.subscribers.items():
+                if user_info["name"].lower() == target_user or contact.split(":")[1].lower() == target_user:
+                    target_user = contact.split(":")[1]
+                    target_name = user_info["name"]
+                    break
+            else:
+                return Chatbot.languages.get_unfound_err(sender_lang)
+
             user_to_check = f"whatsapp:{target_user}"
+            if user_to_check not in self.logs:
+                return Chatbot.languages.get_unfound_err(sender_lang)
+            timestamps = self.logs[user_to_check]["timestamps"]
+            if not timestamps:
+                # TODO: convert to a translated error
+                return f"User {target_name} ({target_user}) has not posted any messages yet."
+            last_post_time = max(timestamps, key=datetime.fromisoformat)
+            # TODO: convert to a translated success message
+            return f"Last post for user {target_name} ({target_user}) was: {last_post_time}"
         else:
-            user_to_check = user_contact
-        if user_to_check not in self.logs:
-            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
-                sender_lang)
-        timestamps = self.logs[user_to_check]["timestamps"]
-        if not timestamps:
-            # TODO: convert to a translated error
-            return f"User {target_user} has not posted any messages yet."
-        last_post_time = max(timestamps, key=datetime.fromisoformat)
-        # TODO: convert to a translated success message
-        return f"Last post for user {user_to_check} was: {last_post_time}"
+            last_posts = {}
+            for user in self.logs:
+                timestamps = self.logs[user]["timestamps"]
+                if timestamps:
+                    last_post_time = max(timestamps, key=datetime.fromisoformat)
+                    last_posts[user] = last_post_time
+            if not last_posts:
+                # TODO: convert to a translated error
+                return "No messages have been posted yet."
+            # TODO: convert to a translated success message
+            last_post_messages = "\n".join([f"{self.subscribers[user]['name']} ({user.split(':')[1]}): {timestamp}" for user, timestamp in last_posts.items()])
+            return f"Last post for all users:\n{last_post_messages}"
 
     def _generate_total_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for all users in a specified time frame.
