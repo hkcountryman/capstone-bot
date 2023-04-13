@@ -102,10 +102,12 @@ class Chatbot:
             account_sid: str,
             auth_token: str,
             number: str,
-            json_file: str = "bot_subscribers/team56test.json",
-            backup_file: str = "bot_subscribers/backup.json",
-            key_file: str = "json/key.key",
-            logs_file: str = "logs.json"):
+            json_file: str = "subscribers.json",
+            backup_file: str = "subscribers_bak.json",
+            key_file: str = "subscribers_key.key",
+            logs_file: str = "logs.json",
+            backup_logs_file: str = "logs_bak.json",
+            logs_key_file: str = "logs_key.key"):
         """Create the ChatBot object and populate class members as needed.
 
         Arguments:
@@ -116,33 +118,29 @@ class Chatbot:
 
         Keyword Arguments:
             json_file -- Path to a JSON file containing subscriber data
-                (default: {"bot_subscribers/team56test.json"})
+                (default: {"bot_subscribers/subscribers.json"})
             backup_file -- Path to a JSON file containing backup data for the
                 above JSON file (default: {"bot_subscribers/backup.json"})
-            key_file -- Path to a file containing the encryption key (default:
-                {"json/key.key"})
-            logs_file -- Path to a JSON file where chat timestamps are stored
-                (default: {"logs.json"})
+            key_file -- Path to a file containing the encryption key
+            logs_file -- Path to a JSON file containing logs data
+            backup_logs_file -- Path to a JSON file containing backup data for
+                the above JSON file
+            logs_key_file -- Path to a file containing the encryption key
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
         self.client = Client(account_sid, auth_token)
         self.number = number
-        self.json_file = json_file
-        self.backup_file = backup_file
-        self.key_file = key_file
-        self.logs_file = logs_file
+        self.json_file = f"json/{json_file}"
+        self.backup_file = f"json/{backup_file}"
+        self.key_file = f"json/{key_file}"
+        self.logs_file = f"json/{logs_file}"
+        self.backup_logs_file = f"json/{backup_logs_file}"
+        self.logs_key_file = f"json/{logs_key_file}"
         self.twilio_account_sid = account_sid
         self.twilio_auth_token = auth_token
         self.twilio_number = number
-        # TODO: Kevin, does this need to be encrypted and backed up?
-        try:
-            with open(self.logs_file, "r", encoding="utf-8") as file:
-                self.logs = json.load(file)
-        except FileNotFoundError:
-            self.logs = {}
-            with open(self.logs_file, "w", encoding="utf-8") as file:
-                json.dump(self.logs, file)
+
         with open(self.json_file, "rb") as file:
             encrypted_data = file.read()
         with open(self.key_file, "rb") as file:
@@ -154,7 +152,7 @@ class Chatbot:
                 unencrypted_data)
         except BaseException:  # pylint: disable=broad-exception-caught
             # Handle corrupted file
-            # TODO: Print message to super administrator that original file is
+            # TODO: Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
             with open(self.backup_file, "rb") as file:
                 backup_encrypted_data = file.read()
@@ -163,6 +161,27 @@ class Chatbot:
             self.subscribers = json.loads(backup_unencrypted_data)
         self.display_names: Dict[str, str] = {
             v["name"]: k for k, v in self.subscribers.items()}
+
+        with open(self.logs_file, "rb") as file:
+            encrypted_logs_data = file.read()
+        with open(self.logs_key_file, "rb") as file:
+            self.key2 = file.read()  # Retrieve encryption key
+        f = Fernet(self.key2)
+        try:
+            unencrypted_logs_data = f.decrypt(
+                encrypted_logs_data).decode("utf-8")
+            # TODO: Put unecrypted data into dictionary
+            self.logs = json.loads(unencrypted_logs_data)
+        except BaseException:  # pylint: disable=broad-exception-caught
+            # Handle corrupted file
+            # TODO: Print message to server logs file that original file is
+            # corrupted...recent data may not have been saved.
+            with open(self.backup_logs_file, "rb") as file:
+                backup_encrypted_logs_data = file.read()
+            backup_unencrypted_logs_data = f.decrypt(
+                backup_encrypted_logs_data).decode("utf-8")
+            # TODO: Put unecrypted data into dictionary
+            self.logs = json.loads(backup_unencrypted_logs_data)
 
     def _reply(self, msg_body: str) -> str:
         """Reply to a message to the bot.
@@ -335,7 +354,8 @@ class Chatbot:
                 "role": new_role
             }
             self.display_names[new_name] = new_contact_key
-            # Save the updated subscribers to team56test.json
+
+            # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
@@ -393,7 +413,8 @@ class Chatbot:
                 name = self.subscribers[user_contact_key]["name"]
                 del self.display_names[name]
                 del self.subscribers[user_contact_key]
-            # Save the updated subscribers to team56test.json
+
+            # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
             # Create byte version of JSON string
@@ -655,10 +676,14 @@ class Chatbot:
                     return self._push(text, sender_contact, media_urls)
 
 
+# Create bot (keyword args not provided because they have defaults)
 TWILIO_ACCOUNT_SID: str = os.getenv(
     "TWILIO_ACCOUNT_SID")  # type: ignore [assignment]
 TWILIO_AUTH_TOKEN: str = os.getenv(
     "TWILIO_AUTH_TOKEN")  # type: ignore [assignment]
 TWILIO_NUMBER: str = os.getenv("TWILIO_NUMBER")  # type: ignore [assignment]
-mr_botty = Chatbot(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+mr_botty = Chatbot(
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_NUMBER)
 """Global Chatbot object, of which there could theoretically be many."""
