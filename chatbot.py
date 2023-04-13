@@ -584,6 +584,36 @@ class Chatbot:
         # TODO: convert to translated success message
         return f"Total messages sent by all users: {total_message_count}"
 
+    def _list_subscribers(self) -> str:
+        """Generate a formatted list of subscribers with their data.
+
+        Returns:
+            A formatted string representing the list of subscribers, including their
+            name, phone number, language, and role. If there are no subscribers, a
+            message indicating this will be returned.
+        """
+        # Check if there are any subscribers
+        # TODO: convert to a translated error message
+        if not self.subscribers:
+            return "No subscribers found."
+
+        # Initialize the formatted list with a header
+        # TODO: convert to a translated success message
+        formatted_list = "List of subscribers:\n\n"
+
+        # Iterate through the subscribers and format their information
+        # TODO: convert to a translated message
+        for contact, user_info in self.subscribers.items():
+            formatted_list += f"Name: {user_info['name']}\n"
+            formatted_list += f"Number: {contact.split(':')[1]}\n"
+            formatted_list += f"Language: {user_info['lang']}\n"
+            formatted_list += f"Role: {user_info['role']}\n"
+            formatted_list += "-" * 30 + "\n"
+
+        # Return the formatted list of subscribers
+        return formatted_list
+
+
     def process_msg(
             self,
             msg: str,
@@ -654,8 +684,8 @@ class Chatbot:
                         self._remove_subscriber(
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
-                    # TODO: make tabular
-                    return self._reply(json.dumps(self.subscribers, indent=2))
+                    return self._reply(self._list_subscribers())
+
                 case consts.STATS:
                     stats = self._generate_stats(sender_contact, msg)
                     return self._reply(stats)
