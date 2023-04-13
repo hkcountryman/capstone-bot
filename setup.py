@@ -4,6 +4,9 @@ This is a basic Python script to be run to set-up the JSON file storing user
 data to be used for all of the included Chatbot functionality.
 """
 
+# TODO: Add log file. Make sure to do error handling, like if the file
+# already exists.
+
 import json
 import os
 import sys

@@ -133,3 +133,4 @@ dmypy.json
 **/.DS_Store
 start.sh
 bot_subscribers/*
+logs.json
