@@ -210,7 +210,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["example"] == "":
@@ -232,7 +233,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["lang_list"] == "":
@@ -257,7 +259,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["lang_err"] == "":
@@ -361,7 +364,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["role_err"] == "":
@@ -597,7 +601,8 @@ def translate_to(text: str, target_lang: str) -> str:
 
     Raises:
         TimeoutError -- If all mirrors time out before providing a translation
-        HTTPError -- If a non-OK response is received from the LibreTranslate
+        requests.ConnectionError -- if all mirrors are down
+        requests.HTTPError -- If a non-OK response is received from the LibreTranslate
             API
     """
     payload = {"q": text, "source": "auto", "target": target_lang}

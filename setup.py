@@ -31,7 +31,9 @@ print("Setting up user data file...\n")
 
 # Get superuser phone number
 sys.stdout.write(BOLD)
-print("Enter your WhatsApp phone number (include country code with +; no other punctuation): ", end="")
+print(
+    "Enter your WhatsApp phone number. Include country code prefaced by a '+'")
+print("character and no other punctuation: ", end="")
 sys.stdout.write(RESET)
 phone_number = ""
 # Checks for the '+' sign
@@ -55,11 +57,12 @@ for (i, lang) in enumerate(col_1):
     left = f"{lang['code']}   {lang['name'].ljust(lang_field_len)}"
     right = f"{col_2[i]['code']}   {col_2[i]['name']}"
     print(f"{left}{right}")
-language = ""
 sys.stdout.write(BOLD)
 print("Enter the code of your preferred language: ", end="")
 sys.stdout.write(RESET)
+language = input()
 while language not in [lang["code"] for lang in lang_json]:
+    print("Invalid language; choose another: ", end="")
     language = input()
 
 # Get superuser preferred display name
@@ -67,6 +70,9 @@ sys.stdout.write(BOLD)
 print("\nEnter a display name (spaces will be removed): ", end="")
 sys.stdout.write(RESET)
 display_name = input().replace(" ", "")  # remove spaces
+while display_name == "" or display_name.startswith("whatsapp:"):
+    print("Invalid display name; choose another: ", end="")
+    display_name = input().replace(" ", "")  # remove spaces
 
 # Create subscriber dictionary with superuser
 user_dict = dict({f"whatsapp:{phone_number}": {
