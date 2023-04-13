@@ -219,7 +219,7 @@ class Chatbot:
                     try:
                         translated = translate_to(
                             text, self.subscribers[s]["lang"])
-                    except (TimeoutError, requests.HTTPError) as e:
+                    except (TimeoutError, requests.ConnectionError, requests.HTTPError) as e:
                         return str(e)
                     translations[self.subscribers[s]["lang"]] = translated
                 msg = self.client.messages.create(
@@ -262,7 +262,7 @@ class Chatbot:
             text = f"Private message from {sender}:\n{msg}"
             try:
                 translated = translate_to(text, recipient_lang)
-            except (TimeoutError, requests.HTTPError) as e:
+            except (TimeoutError, requests.ConnectionError, requests.HTTPError) as e:
                 return str(e)
             pm = self.client.messages.create(
                 from_=f"whatsapp:{self.number}",
@@ -298,7 +298,7 @@ class Chatbot:
             try:
                 translated = translate_to(text, l)
                 return translate_to(translated, sender_lang)
-            except (TimeoutError, requests.HTTPError) as e:
+            except (TimeoutError, requests.ConnectionError, requests.HTTPError) as e:
                 return str(e)
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)

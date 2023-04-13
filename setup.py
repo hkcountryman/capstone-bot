@@ -92,6 +92,8 @@ user_list_byte = user_list.encode("utf-8")
 f = Fernet(key)
 encrypted_data = f.encrypt(user_list_byte)
 
+print()
+
 try:
     with open(f"{JSON_DIR}/{JSON_FILE}", "xb") as file:
         file.write(encrypted_data)
@@ -101,7 +103,7 @@ try:
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under {JSON_DIR}/{JSON_FILE} already exists. " +
+        f"A file under {JSON_DIR}/{JSON_FILE} already exists. " +
         "Delete and try again if you're certain.")
     sys.stdout.write(RESET)
     sys.exit(1)
@@ -115,7 +117,7 @@ try:
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under bot_subscribers/{BACKUP_FILE} already exists. " +
+        f"A file under bot_subscribers/{BACKUP_FILE} already exists. " +
         "Delete and try again if you're certain.")
     sys.stdout.write(RESET)
     sys.exit(1)
@@ -148,7 +150,7 @@ try:
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under {JSON_DIR}/{LOGS_FILE} already exists. " +
+        f"A file under {JSON_DIR}/{LOGS_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
@@ -162,7 +164,7 @@ try:
 except FileExistsError:
     sys.stdout.write(BOLD + RED)
     print(
-        f"\nA file under {JSON_DIR}/{BACKUP_LOGS_FILE} already exists. " +
+        f"A file under {JSON_DIR}/{BACKUP_LOGS_FILE} already exists. " +
         "Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)
