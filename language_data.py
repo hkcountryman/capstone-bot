@@ -65,7 +65,7 @@ err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
 # Invalid time frame
 err_msgs.stats_err = "Invalid time frame. "
-err_msgs.stats_usage_err = "/stats 1 day +12345678900\n/stats 2 days username"
+err_msgs.stats_usage_err = "/stats 1 day +12345678900\n/stats 7 days name\n/stats 30 days"
 err_msgs.no_posts = "There are no messages."  # /lastpost no messages
 
 
