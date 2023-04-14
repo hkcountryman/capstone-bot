@@ -71,6 +71,14 @@ class Chatbot:
         client -- Client with which to access the Twilio API
         number -- Phone number the bot texts from
         json_file -- Path to a JSON file containing subscriber data
+        backup_file -- Path to a JSON file containing backup data for the
+            subscribers JSON file
+        key_file -- Path to a file containing the encryption key
+        logs_file -- Path to a JSON file containing logs data
+        backup_logs_file -- Path to a JSON file containing backup data for the
+            logs JSON file
+        logs_key_file -- Path to a file containing the encryption key for the
+            logs JSON file
         subscribers -- Dictionary containing the data loaded from the file
         display_names -- Dictionary mapping display names to WhatsApp numbers
             for subscribers
@@ -123,8 +131,8 @@ class Chatbot:
                 {"logs.json"})
             backup_logs_file -- Path to a JSON file containing backup data for
                 the above JSON file (default: {"logs_bak.json"})
-            logs_key_file -- Path to a file containing the encryption key
-                (default: {"logs_key.json"})
+            logs_key_file -- Path to a file containing the encryption key for
+                the logs JSON file (default: {"logs_key.json"})
         """
         if Chatbot.languages is None:
             Chatbot.languages = LangData()
@@ -218,7 +226,8 @@ class Chatbot:
                     try:
                         translated = translate_to(
                             text, self.subscribers[s]["lang"])
-                    except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+                    except (TimeoutError, requests.ReadTimeout,
+                            requests.ConnectionError, requests.HTTPError):
                         return consts.API_OFFLINE
                     translations[self.subscribers[s]["lang"]] = translated
                 msg = self.client.messages.create(
@@ -255,7 +264,7 @@ class Chatbot:
             # Check if recipient exists
             r = self.display_names.get(recipient, "")
             if r == "":  # not a display name; check if it's a phone number
-                if f"whatsapp:{recipient}" not in self.subscribers:  # not a number either
+                if f"whatsapp:{recipient}" not in self.subscribers:  # nope
                     return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
                         sender_lang)
                 else:  # is number
@@ -265,7 +274,8 @@ class Chatbot:
             text = f"Private message from {sender}:\n{msg}"
             try:
                 translated = translate_to(text, recipient_lang)
-            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 return consts.API_OFFLINE
             pm = self.client.messages.create(
                 from_=f"whatsapp:{self.number}",
@@ -301,7 +311,8 @@ class Chatbot:
             try:
                 translated = translate_to(text, l)
                 return translate_to(translated, sender_lang)
-            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 return consts.API_OFFLINE
         return Chatbot.languages.get_test_example(  # type: ignore [union-attr]
             sender_lang)
@@ -458,14 +469,12 @@ class Chatbot:
                 self.logs[sender_contact]["timestamps"].append(timestamp)
             else:  # otherwise add them to logs before adding timestamp
                 self.logs[sender_contact] = {"timestamps": [timestamp]}
-
             # Remove messages older than 1 year
             one_year_ago = datetime.now() - timedelta(days=365)
             for contact_key in self.logs:
                 self.logs[contact_key]["timestamps"] = [
-                    ts for ts in self.logs[contact_key]["timestamps"] if datetime.fromisoformat(ts) >= one_year_ago]
-
-            # TODO: Kevin, does this need to be encrypted or anything?
+                    ts for ts in self.logs[contact_key]["timestamps"] if
+                    datetime.fromisoformat(ts) >= one_year_ago]
             with open(self.logs_file, "w", encoding="utf-8") as file:
                 json.dump(self.logs, file, indent=2)
 
@@ -539,7 +548,8 @@ class Chatbot:
                         user_message_count += 1
                 user_message_counts[contact_key] = user_message_count
             # Prepare the result string
-            result = f"Total messages sent by all users: {total_message_count}\n\n"
+            result = \
+                f"Total messages sent by all users: {total_message_count}\n\n"
             for contact_key, message_count in user_message_counts.items():
                 if message_count > 0:  # Only show if the user has sent messages
                     user_name = self.subscribers[contact_key]["name"]
@@ -551,7 +561,7 @@ class Chatbot:
             self,
             user_contact: str,
             target_user: str = "") -> str:
-        """Get the latest post's timestamp for a user or all users if no user specified.
+        """Get the latest post's timestamp for one or all users.
 
         Arguments:
             user_contact -- the WhatsApp contact info of the user making this
@@ -570,7 +580,7 @@ class Chatbot:
         if target_user != "":
             target_number = self.display_names.get(target_user, "")
             if target_number == "":  # not a display name; check if it's a phone number
-                if f"whatsapp:{target_user}" not in self.subscribers:  # not a number either
+                if f"whatsapp:{target_user}" not in self.subscribers:  # nope
                     return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
                         sender_lang)
                 else:  # is number
