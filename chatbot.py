@@ -153,8 +153,14 @@ class Chatbot:
                 unencrypted_data)
         except BaseException:  # pylint: disable=broad-exception-caught
             # Handle corrupted file
-            # TODO: Print message to server logs file that original file is
+            # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
+            with open("server_log.txt", "a") as file:
+                timestamp = datetime.now().strftime("%Y-%m-%d")
+                file.write(
+                    timestamp +
+                    ": Corrupted subscribers.json file...using backup file. Newest data may be missing.\n")
+
             with open(self.backup_file, "rb") as file:
                 backup_encrypted_data = file.read()
             backup_unencrypted_data = f.decrypt(
@@ -171,12 +177,18 @@ class Chatbot:
         try:
             unencrypted_logs_data = f.decrypt(
                 encrypted_logs_data).decode("utf-8")
-            # TODO: Put unecrypted data into dictionary
+            # Put unecrypted data into dictionary
             self.logs = json.loads(unencrypted_logs_data)
         except BaseException:  # pylint: disable=broad-exception-caught
             # Handle corrupted file
-            # TODO: Print message to server logs file that original file is
+            # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
+            with open("server_log.txt", "a") as file:
+                timestamp = datetime.now().strftime("%Y-%m-%d")
+                file.write(
+                    timestamp +
+                    ": Corrupted logs.json file...using backup file. Latest logs may be missing.\n")
+
             with open(self.backup_logs_file, "rb") as file:
                 backup_encrypted_logs_data = file.read()
             backup_unencrypted_logs_data = f.decrypt(
@@ -331,7 +343,7 @@ class Chatbot:
                 return ""
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                    ) or (not new_contact[1:].isdigit()):
+                ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
             # start attempt to add contact
