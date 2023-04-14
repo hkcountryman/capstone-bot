@@ -48,8 +48,11 @@ def bot() -> str:
         The bot's response.
     """
     (msg, sender_contact, media_urls) = _get_incoming_msg(request)
-
     return mr_botty.process_msg(
         msg,
         sender_contact,
         media_urls)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")
