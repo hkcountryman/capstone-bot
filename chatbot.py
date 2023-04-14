@@ -12,15 +12,15 @@ Classes:
         associated WhatsApp bot
 """
 
+# import asyncio
 import json
-import asyncio
-import aiofiles
 import os
 import re
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
 
+# import aiofiles
 import requests
 from cryptography.fernet import Fernet
 from twilio.rest import Client
@@ -163,7 +163,7 @@ class Chatbot:
             # Handle corrupted file
             # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
-            with open("server_log.txt", "a") as file:
+            with open("server_log.txt", "a", encoding="utf-8") as file:
                 timestamp = datetime.now().strftime("%Y-%m-%d")
                 file.write(
                     timestamp +
@@ -191,7 +191,7 @@ class Chatbot:
             # Handle corrupted file
             # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
-            with open("server_log.txt", "a") as file:
+            with open("server_log.txt", "a", encoding="utf-8") as file:
                 timestamp = datetime.now().strftime("%Y-%m-%d")
                 file.write(
                     timestamp +
@@ -201,7 +201,6 @@ class Chatbot:
                 backup_encrypted_logs_data = file.read()
             backup_unencrypted_logs_data = f.decrypt(
                 backup_encrypted_logs_data).decode("utf-8")
-            # TODO: Put unecrypted data into dictionary
             self.logs = json.loads(backup_unencrypted_logs_data)
 
     def _reply(self, msg_body: str) -> str:
@@ -354,7 +353,7 @@ class Chatbot:
                 return ""
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                    ) or (not new_contact[1:].isdigit()):
+                ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
             # start attempt to add contact
@@ -383,7 +382,6 @@ class Chatbot:
                 "role": new_role
             }
             self.display_names[new_name] = new_contact_key
-
             # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
@@ -398,9 +396,24 @@ class Chatbot:
                     open(self.backup_file, "wb") as filetwo:
                 for line in fileone:
                     filetwo.write(line)
+            # Add new user to the timestamp logs
+            self.logs[new_contact_key] = {}
+            # Convert the dictionary of logs to a formatted JSON string
+            logs_list = json.dumps(self.logs, indent=4)
+            # Create byte version of JSON string
+            logs_list_byte = logs_list.encode("utf-8")
+            f = Fernet(self.key2)
+            encrypted_data = f.encrypt(logs_list_byte)
+            with open(self.logs_file, "wb") as file:
+                file.write(encrypted_data)
+            # Copy data to backup file
+            with open(self.logs_file, "rb") as fileone, \
+                    open(self.backup_logs_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+            # Success!
             return Chatbot.languages.get_add_success(  # type: ignore [union-attr]
                 sender_lang)
-            # TODO: Add new user to the timestamp logs
         else:
             return Chatbot.languages.get_add_err(  # type: ignore [union-attr]
                 sender_lang)
@@ -440,10 +453,12 @@ class Chatbot:
                 return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
                     sender_lang)
             else:
+                # Delete subscriber
                 name = self.subscribers[user_contact]["name"]
                 del self.display_names[name]
                 del self.subscribers[user_contact]
-
+                # Delete their chat logs
+                del self.logs[user_contact]
             # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
@@ -458,9 +473,22 @@ class Chatbot:
                     open(self.backup_file, "wb") as filetwo:
                 for line in fileone:
                     filetwo.write(line)
+            # Save updated chat logs to logs.json
+            logs_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            logs_list_byte = logs_list.encode("utf-8")
+            f = Fernet(self.key2)
+            encrypted_data = f.encrypt(logs_list_byte)
+            with open(self.logs_file, "wb") as file:
+                file.write(encrypted_data)
+            # Copy data to backup file
+            with open(self.logs_file, "rb") as fileone, \
+                    open(self.backup_logs_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+            # Success!
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                 sender_lang)
-            # TODO: also remove subscriber's chat logs
         else:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
@@ -478,14 +506,11 @@ class Chatbot:
         if not msg.startswith("/") and not (msg.startswith(pm_char) and
                                             len(msg.split()) <= 1):
             timestamp = datetime.now().strftime("%Y-%m-%d")
-            if sender_contact in self.logs:  # sender is already in the log file...
-                if timestamp in self.logs[sender_contact]:
-                    self.logs[sender_contact][timestamp] += 1
-                else:
-                    self.logs[sender_contact][timestamp] = 1
-            else:  # otherwise, add them to logs before adding timestamp
-                self.logs[sender_contact] = {timestamp: 1}
-
+            if timestamp in self.logs[sender_contact]:
+                self.logs[sender_contact][timestamp] += 1
+            else:
+                self.logs[sender_contact][timestamp] = 1
+            
             # Remove messages older than 1 year
             one_year_ago = datetime.now() - timedelta(days=365)
             for contact_key in self.logs:
@@ -574,13 +599,12 @@ class Chatbot:
                 phone = contact_key.split(":")[1]
                 user_message_count = 0
                 for timestamp_str in self.logs[contact_key]:
-                    # TODO: above will be self.logs[contact_key].keys()
                     timestamp = datetime.fromisoformat(timestamp_str)
                     if start_date <= timestamp <= end_date:
                         total_message_count += 1
                         user_message_count += 1
                 report += f"\n{name}, {phone}, {user_message_count}"
-            report += f"\n,,{total_message_count}"  # sum
+            report += f"\n\nTOTAL: {total_message_count}"  # sum
         # Return report
         return report
 
@@ -620,27 +644,24 @@ class Chatbot:
             # Locate user's timestamps
             phone = target_number.split(":")[1]  # remove "whatsapp:"
             timestamps = self.logs[target_number]
-            # TODO: the above will change to self.logs[target_number], an
-            # object with keys that are dates and values that are messages sent
-            # on that date. All users should have an entry.
             if len(timestamps) == 0:
-                return Chatbot.languages.get_no_posts(sender_lang)
+                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
+                    sender_lang)
             last_post_time = max(timestamps, key=datetime.fromisoformat)
             report += f"\n{target_name}, {phone}, {last_post_time}"
         # All users
         else:
-            last_posts = {}
+            last_posts = []
             for user, user_logs in self.logs.items():
-                # TODO: the above will change to self.logs[user], an
-                # object with keys that are dates and values that are messages
-                # sent on that date. All users should have an entry.
                 if len(user_logs) != 0:
                     name = self.subscribers[user]["name"]
+                    phone = user.split(":")[1]
                     last_post_time = max(user_logs, key=datetime.fromisoformat)
-                    last_posts[user] = f"\n{name}, {user}, {last_post_time}"
+                    last_posts.append(f"{name}, {phone}, {last_post_time}")
             if not last_posts:
-                return Chatbot.languages.get_no_posts(sender_lang)
-            report += "".join(last_posts)
+                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
+                    sender_lang)
+            report += "\n" + "\n".join(last_posts)
         # Return report
         return report
 

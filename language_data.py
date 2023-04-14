@@ -64,7 +64,7 @@ err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
 # Invalid time frame
-err_msgs.stats_err = "Invalid time frame. Use format: 7 day(s)."
+err_msgs.stats_err = "Invalid time frame. "
 err_msgs.stats_usage_err = "/stats 1 day +12345678900\n/stats 7 days name\n/stats 30 days"
 err_msgs.no_posts = "There are no messages."  # /lastpost no messages
 
@@ -598,12 +598,14 @@ class LangData:
         if self.entries[code]["stats_err"] == "":
             try:
                 self.entries[code]["stats_err"] = translate_to(
-                    err_msgs.stats_err, code)
+                    err_msgs.stats_err, code) + self._get_example(code) + \
+                    err_msgs.stats_usage_err
             except (TimeoutError, requests.ReadTimeout,
                     requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
-                return err_msgs.stats_err
+                return err_msgs.stats_err + err_msgs.example + \
+                    err_msgs.stats_usage_err
         return self.entries[code]["stats_err"]
 
     def get_stats_usage_err(self, code: str) -> str:
