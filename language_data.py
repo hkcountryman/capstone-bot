@@ -681,6 +681,8 @@ def translate_to(text: str, target_lang: str) -> str:
     res = None
     while res is None and idx < len(consts.MIRRORS):
         try:
+            # TODO: Sometimes you get a 400 response with content {"error":
+            # "<language code> is not supported"} for small things
             res = requests.post(
                 consts.MIRRORS[idx],
                 data=payload,
