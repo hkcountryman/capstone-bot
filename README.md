@@ -286,16 +286,33 @@ The script generates a JSON file that includes the superuser as a user with thei
 
 You can deploy in any Linux environment, on either a local machine, a VPS, or an online service like Heroku or AWS. You will run the Flask app on [Gunicorn](https://gunicorn.org/), a Python WSGI HTTP server, proxied behind [nginx](https://nginx.org/), an HTTP proxy server.
 
-#### Nginx
-
-As a proxy server, nginx will receive requests from the outside world to pass to your WSGI server as well as listen for responses from the WSGI server to forward back to the outside world. Start nginx with the `nginx` command.
-
-The example `nginx.conf` in this repository is suitable and can be placed in either `/usr/local/nginx/conf/`, `/etc/nginx/`, or `/usr/local/etc/nginx/`. (Note that you have to run `nginx -s reload` if you change the configuration file.)
-
 #### Gunicorn
 
-It will be installed already in the virtual environment. Run as [described here](https://docs.gunicorn.org/en/latest/run.html#gunicorn). For example, you may use
+It will be installed already in the virtual environment. Run as [described here](https://docs.gunicorn.org/en/latest/run.html#gunicorn). `wsgi.py` imports Flask and starts the example, so to run the server on port 8080, you could use
 
 ```
-gunicorn -b localhost:8080 ''
+gunicorn -b 0.0.0.0:8080 'wsgi:app'
 ```
+
+Be sure the environment variables are set before attempting to start Gunicorn or the server will fail to start. If all goes well, the output should look like this example:
+
+```
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Starting gunicorn 20.1.0
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Listening at: http://0.0.0.0:8080 (17775)
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Using worker: sync
+[2023-04-14 12:03:37 -0700] [17777] [INFO] Booting worker with pid: 17777
+```
+
+Note that the output includes the daemon's PID. [Here are the different signals you can send to the Gunicorn daemon.](https://docs.gunicorn.org/en/stable/signals.html) For example, you could gracefully shut down your server with a `SIGTERM` signal sent to the PID listed in the second line of output:
+
+```
+kill -TERM 17775
+```
+
+#### Nginx
+
+As a proxy server, nginx will receive requests from the outside world to pass to your WSGI server as well as listen for responses from the WSGI server to forward back to the outside world.
+
+See [the Gunicorn docs about using nginx](https://docs.gunicorn.org/en/latest/deploy.html#nginx-configuration), where you can find a sample `nginx.conf` that can be placed under either `/usr/local/nginx/conf/`, `/etc/nginx/`, or `/usr/local/etc/nginx/`. [The nginx docs](https://nginx.org/en/docs/) include instructions to [configure a proxy](https://nginx.org/en/docs/beginners_guide.html#proxy) and [control nginx](https://nginx.org/en/docs/beginners_guide.html#control).
+
+If you would like to set up a systemd service to handle this process, [this tutorial can help](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04#step-4-configuring-gunicorn). It also includes [more information about proxying with nginx](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04#step-5-configuring-nginx-to-proxy-requests).
