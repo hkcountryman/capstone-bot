@@ -4,6 +4,18 @@ This module contains information about languages supported by LibreTranslate. It
 includes the LangData class, which can be shared by all chatbots on the server
 to look up language names, codes, and error messages, as well as the
 translate_to function, which can translate text into a target language.
+
+Classes:
+    LangEntry -- A TypedDict to describe all data associated with a language
+        code, namely the human-readable name, translation target codes, and
+        error and success messages translated into that language
+    LangData -- A class containing convenience members for maintaining the
+        LangEntry dictionaries for all supported languages, a list of all
+        language codes, a list of all language names, and methods to return
+        translated error and success messages
+
+Functions:
+    translate_to -- Translate some text to a given target language
 """
 
 import json
@@ -40,22 +52,43 @@ err_msgs.test_example = "/test es How are you today?"  # /test example
 err_msgs.lang_err = "Choose a valid language. "  # preface errors
 err_msgs.lang_list = ""  # list of all valid languages
 err_msgs.add_example = "/add +12345678900 xX_bob_Xx en user"  # /add example
+# invalid phone number
+err_msgs.add_phone_err = \
+    "A phone number contains only digits and a plus sign for the country code."
+err_msgs.add_name_err = "Choose a different username."  # display name taken
 err_msgs.role_err = "Choose a valid role:"  # preface errors
 err_msgs.roles = " (user | admin | super)"  # valid roles
 err_msgs.exists_err = "User already exists."  # /add existing user
-err_msgs.remove_example = "/remove +12345678900"  # /remove example
+err_msgs.remove_example = "/remove +12345678900\n/remove username"  # /remove example
 err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
+# Invalid time frame
+err_msgs.stats_err = "Invalid time frame. Use format: 7 day(s)."
+err_msgs.stats_usage_err = "/stats 1 day +12345678900\n/stats 2 days username\n/stats"
+err_msgs.no_posts = "There are no messages."  # /lastpost no messages
+
 
 # Strings for success messages
 success = SimpleNamespace()
 success.added = "New user added successfully."  # /add
-success.removed = "User removed successfully."
+success.removed = "User removed successfully."  # /remove
+success.stats = ["user", "phone number", "messages"]  # /stats column headers
+# /lastpost column headers
+success.lastpost = ["user", "phone number", "most recent message"]
+success.list_ = [
+    "user",
+    "phone number",
+    "language",
+    "type"]  # /list column headers
 
 
 class LangEntry(TypedDict):
-    """A TypedDict to describe associated data for some language code."""
+    """A TypedDict to describe associated data for some language code.
+
+    The error and success messages should be initialized to empty strings and
+    are saved as they are needed and subsequently translated into the language.
+    """
     # Language data
     name: str  # human-readable name
     targets: List[str]  # codes for targets this language can be translated to
@@ -66,6 +99,8 @@ class LangEntry(TypedDict):
     lang_err: str  # generic error header for invalid languages in this language
     lang_list: str  # list of valid languages (no codes) in this language
     add_example: str  # /add example
+    add_phone_err: str  # invalid phone number
+    add_name_err: str  # display name taken
     role_err: str  # generic error header for invalid roles in this language
     add_role_err: str  # /add role error message in this language
     exists_err: str  # /add error if user exists
@@ -73,17 +108,26 @@ class LangEntry(TypedDict):
     unfound_err: str  # /remove error if user not found
     remove_self_err: str  # /remove error if user tries to remove self
     remove_super_err: str  # /remove error if admin tries to remove super
+    stats_err: str  # /stats error if invalid time frame
+    stats_usage_err: str  # /stats error if invalid usage
+    no_posts: str  # /lastpost no messages
 
     # Success messages
     added: str  # /add
     removed: str  # /remove
+    stats: str  # /stats column headers
+    lastpost: str  # /lastpost column headers
+    list_: str  # /list column headers
 
 
 class LangData:
     """An object that can hold all language data.
 
     Language data includes human-readable names and translation targets
-    associated with a language code as well as error messages
+    associated with a language code as well as error messages.
+
+    It also has methods to return error and success messages translated into a
+    given language.
 
     Instance variables:
         codes -- List of all language codes supported by LibreTranslate
@@ -93,9 +137,34 @@ class LangData:
             corresponding LangEntry dictionaries
 
     Methods:
-        get_test_example -- get the /test error message for a given language
-            code
-        get_add_example -- get the /add error message for a given language code
+        get_test_example -- get the /test error message
+        get_add_lang_err -- get the error message when /add uses an invalid
+            language
+        get_add_phone_err -- get the /add error message when a phone number is
+            invalid
+        get_add_name_err -- get the /add error message when a display name is
+            already taken
+        get_add_role_err -- get the /add error message when a role is invalid
+        get_exists_err -- get the /add error message when attempting to add an
+            existing user
+        get_add_err -- get the generic /add error message for bad syntax
+        get_add_success -- get a success message for /add
+        get_unfound_err -- get an error message when referencing a nonexistent
+            user
+        get_remove_err -- get the generic /remove error message for bad syntax
+        get_remove_self_err -- get the error message for removing yourself
+        get_remove_super_err -- get the error message for removing a superuser
+            as an admin
+        get_remove_success -- get a success message for /remove
+        get_stats_err -- get the error message for giving an invalid timeframe
+            for /stats
+        get_stats_usage_err -- get the generic /stats error message for bad
+            syntax
+        get_no_posts -- get an error message when calling /lastpost if there
+            have been no posts
+        get_stats_headers -- get the CSV headers for a /stats report
+        get_lastpost_headers -- get the CSV headers for a /lastpost report
+        get_list_headers -- get the CSV headers for a /list report
     """
 
     def __init__(self):
@@ -107,7 +176,8 @@ class LangData:
                 res = requests.get(
                     f"{consts.MIRRORS[idx]}languages",
                     timeout=consts.TIMEOUT)
-            except TimeoutError:
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 idx = idx + 1
         if res is not None and res.status_code == 200:
             languages = res.json()
@@ -129,6 +199,8 @@ class LangData:
                 "lang_err": "",
                 "lang_list": "",
                 "add_example": "",
+                "add_phone_err": "",
+                "add_name_err": "",
                 "role_err": "",
                 "add_role_err": "",
                 "exists_err": "",
@@ -136,8 +208,14 @@ class LangData:
                 "unfound_err": "",
                 "remove_self_err": "",
                 "remove_super_err": "",
+                "stats_err": "",
+                "stats_usage_err": "",
+                "no_posts": "",
                 "added": "",
-                "removed": ""}
+                "removed": "",
+                "stats": "",
+                "lastpost": "",
+                "list_": ""}
         err_msgs.lang_list = "".join(
             ["Languages:"] + list(map(lambda l: (f"\n{l}"), self.names)))
 
@@ -155,7 +233,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["example"] == "":
@@ -177,7 +256,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["lang_list"] == "":
@@ -202,7 +282,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["lang_err"] == "":
@@ -226,7 +307,8 @@ class LangData:
                 self.entries[code]["test_example"] = self._get_lang_err(
                     code) + self._get_example(code) + err_msgs.test_example + \
                     "\n\n" + self._get_lang_list(code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.lang_err + err_msgs.example + \
@@ -249,12 +331,53 @@ class LangData:
                 self.entries[code]["add_example"] = self._get_lang_err(
                     code) + self._get_example(code) + err_msgs.add_example + \
                     "\n\n" + self._get_lang_list(code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.lang_err + err_msgs.example + \
                     err_msgs.add_example + "\n\n" + err_msgs.lang_list
         return self.entries[code]["add_example"]
+
+    def get_add_phone_err(self, code: str) -> str:
+        """Get a translated error when a phone number is invalid.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_phone_err"] == "":
+            try:
+                self.entries[code]["add_phone_err"] = translate_to(
+                    err_msgs.add_phone_err, code)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_phone_err
+        return self.entries[code]["add_phone_err"]
+
+    def get_add_name_err(self, code: str) -> str:
+        """Get a translated error when a display name is taken.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["add_name_err"] == "":
+            try:
+                self.entries[code]["add_name_err"] = translate_to(
+                    err_msgs.add_name_err, code)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.add_name_err
+        return self.entries[code]["add_name_err"]
 
     def _get_role_err(self, code: str) -> str:
         """Get a translated error when a role is invalid.
@@ -268,7 +391,8 @@ class LangData:
         Raises:
             TimeoutError -- If all mirrors time out before providing a
                 translation
-            HTTPError -- If a non-OK response is received from the
+            requests.ConnectionError -- if all mirrors are down
+            requests.HTTPError -- If a non-OK response is received from the
                 LibreTranslate API
         """
         if self.entries[code]["role_err"] == "":
@@ -290,7 +414,8 @@ class LangData:
                 self.entries[code]["add_role_err"] = self._get_role_err(
                     code) + err_msgs.roles + "\n" + self._get_example(code) + \
                     err_msgs.add_example
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.role_err + err_msgs.roles + "\n" + \
@@ -310,7 +435,8 @@ class LangData:
             try:
                 self.entries[code]["exists_err"] = translate_to(
                     err_msgs.exists_err, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.exists_err
@@ -329,7 +455,8 @@ class LangData:
             try:
                 self.entries[code]["add_example"] = self._get_example(code) + \
                     err_msgs.add_example
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.example + err_msgs.add_example
@@ -348,7 +475,8 @@ class LangData:
             try:
                 self.entries[code]["added"] = translate_to(
                     success.added, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the message at the moment, compromise
                 # and return it in English
                 return success.added
@@ -357,7 +485,7 @@ class LangData:
     # /remove
 
     def get_unfound_err(self, code: str) -> str:
-        """Get a translated error when calling /remove on a nonexistent user.
+        """Get a translated error when referencing a nonexistent user.
 
         Arguments:
             code -- Code of the language to translate the output to
@@ -369,7 +497,8 @@ class LangData:
             try:
                 self.entries[code]["unfound_err"] = translate_to(
                     err_msgs.unfound_err, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.unfound_err
@@ -388,7 +517,8 @@ class LangData:
             try:
                 self.entries[code]["remove_example"] = self._get_example(
                     code) + err_msgs.remove_example
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.example + err_msgs.remove_example
@@ -407,7 +537,8 @@ class LangData:
             try:
                 self.entries[code]["remove_self_err"] = translate_to(
                     err_msgs.remove_self_err, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.remove_self_err
@@ -426,7 +557,8 @@ class LangData:
             try:
                 self.entries[code]["remove_super_err"] = translate_to(
                     err_msgs.remove_super_err, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the error at the moment, compromise and
                 # return it in English
                 return err_msgs.remove_super_err
@@ -445,11 +577,134 @@ class LangData:
             try:
                 self.entries[code]["removed"] = translate_to(
                     success.removed, code)
-            except (TimeoutError, requests.HTTPError):
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
                 # If we can't translate the message at the moment, compromise
                 # and return it in English
                 return success.removed
         return self.entries[code]["removed"]
+
+    # /stats
+
+    def get_stats_err(self, code: str) -> str:
+        """Get a translated error message for an invalid timeframes for /stats.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["stats_err"] == "":
+            try:
+                self.entries[code]["stats_err"] = translate_to(
+                    err_msgs.stats_err, code)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.stats_err
+        return self.entries[code]["stats_err"]
+
+    def get_stats_usage_err(self, code: str) -> str:
+        """Get a translated error message for bad syntax for the /stats command.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["stats_usage_err"] == "":
+            try:
+                self.entries[code]["stats_usage_err"] = self._get_example(
+                    code) + err_msgs.stats_usage_err
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.stats_usage_err
+        return self.entries[code]["stats_usage_err"]
+
+    def get_no_posts(self, code: str) -> str:
+        """Get a translated error message for /lastpost when there are no posts.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["no_posts"] == "":
+            try:
+                self.entries[code]["no_posts"] = translate_to(
+                    err_msgs.no_posts, code)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return err_msgs.no_posts
+        return self.entries[code]["no_posts"]
+
+    def get_stats_headers(self, code: str) -> str:
+        """Get translated column headers for the /stats report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["stats"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.stats]
+                self.entries[code]["stats"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.stats)
+        return self.entries[code]["stats"]
+
+    def get_lastpost_headers(self, code: str) -> str:
+        """Get translated column headers for the /lastpost report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["lastpost"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.lastpost]
+                self.entries[code]["lastpost"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.lastpost)
+        return self.entries[code]["lastpost"]
+
+    def get_list_headers(self, code: str) -> str:
+        """Get translated column headers for the /list report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["list_"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.list_]
+                self.entries[code]["list_"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout,
+                    requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.list_)
+        return self.entries[code]["list_"]
 
 
 def translate_to(text: str, target_lang: str) -> str:
@@ -464,8 +719,9 @@ def translate_to(text: str, target_lang: str) -> str:
 
     Raises:
         TimeoutError -- If all mirrors time out before providing a translation
-        HTTPError -- If a non-OK response is received from the LibreTranslate
-            API
+        requests.ConnectionError -- if all mirrors are down
+        requests.HTTPError -- If a non-OK response is received from the
+            LibreTranslate API
     """
     payload = {"q": text, "source": "auto", "target": target_lang}
     idx = 0  # index in URLs
@@ -476,7 +732,7 @@ def translate_to(text: str, target_lang: str) -> str:
                 consts.MIRRORS[idx],
                 data=payload,
                 timeout=consts.TIMEOUT)
-        except TimeoutError:
+        except (TimeoutError, requests.ReadTimeout):
             idx = idx + 1
     if res is None:  # ran out of mirrors to try
         raise TimeoutError("Translation timed out for all mirrors")

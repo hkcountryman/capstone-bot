@@ -26,7 +26,7 @@ This WhatsApp bot holds one-on-one conversations with each subscriber in a "grou
 
 Begin by cloning the repository and entering its directory:
 
-```bash
+```
 git clone https://github.com/hkcountryman/capstone-bot
 cd capstone-bot
 ```
@@ -125,7 +125,7 @@ The script generates a JSON file that includes the superuser as a user with thei
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
 
-```bash
+```
 python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
@@ -137,7 +137,7 @@ Note: On a Windows system, run
 
 **Any time you add a dependency, it must be added to `requirements.txt` via**
 
-```bash
+```
 pip freeze > requirements.txt
 ```
 
@@ -145,7 +145,7 @@ You won't need to reinstall dependencies unless they change and you won't need t
 
 After activating the virtual environment, run
 
-```bash
+```
 pre-commit install
 ```
 
@@ -157,9 +157,13 @@ If you wish to host your own LibreTranslate server, you may do so according to t
 
 If you choose to run the server locally, one easy way is through Docker:
 
-```bash
+```
 docker-compose up -d --build
 ```
+
+While developing, do not allow your computer to sleep with a self-hosted LibreTranslate server running. Upon waking it will likely claim to be "healthy" if you run `docker ps` but it will be incapable of responding to requests, claiming that all languages are "not supported" and responding with a 400 HTTP status code.
+
+Note that self-hosted Docker containers may take some time to start up. Run `docker ps` to check their status (they should be "healthy", not "starting") and do not attempt to visit http://0.0.0.0:5000/ or make requests to LibreTranslate until after the server has started, as that may cause the container to have the "unhealthy" status.
 
 ### Running
 
@@ -187,7 +191,7 @@ flask run --debugger --port 8080  # run Flask in debug mode for hot reloading wh
 
 Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `LIBRETRANSLATE`, and optionally `TRANSLATION_TIMEOUT`, the values of which are described above under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code):
 
-```bash
+```
 export TWILIO_NUMBER="+14155238886"
 export TWILIO_ACCOUNT_SID="<account SID>"
 export TWILIO_AUTH_TOKEN="<auth token>"
@@ -197,13 +201,13 @@ export TRANSLATION_TIMEOUT=<translation request timeout seconds>
 
 Then, with the virtual environment active, run the server:
 
-```bash
+```
 flask run --debugger --port 8080
 ```
 
 Next, use ngrok to expose a temporary, public URL for the server:
 
-```bash
+```
 ngrok http 8080
 ```
 
@@ -231,7 +235,7 @@ Now you can try texting the number you texted earlier for the Sandbox.
 
 Begin by cloning the repository and entering its directory:
 
-```bash
+```
 git clone https://github.com/hkcountryman/capstone-bot
 cd capstone-bot
 ```
@@ -240,7 +244,7 @@ cd capstone-bot
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
 
-```bash
+```
 python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
@@ -252,9 +256,11 @@ If you wish to host your own LibreTranslate server, you may do so according to t
 
 If you choose to run the server locally, one easy way is through Docker:
 
-```bash
+```
 docker-compose up -d --build
 ```
+
+Note that self-hosted Docker containers may take some time to start up. Run `docker ps` to check their status (they should be "healthy", not "starting") and do not attempt to visit http://0.0.0.0:5000/ or make requests to LibreTranslate until after the server has started, as that may cause the container to have the "unhealthy" status.
 
 #### Environment variables
 
@@ -268,10 +274,10 @@ The system must have the following environment variables set:
 
 #### JSON user file
 
-The superuser must run the setup script prior to starting the server:
+The superuser must run the setup script prior to starting the server (note that it requires activation of the virtual environment to run):
 
 ```
-./setup.py [JSON file name]
+python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
@@ -280,16 +286,33 @@ The script generates a JSON file that includes the superuser as a user with thei
 
 You can deploy in any Linux environment, on either a local machine, a VPS, or an online service like Heroku or AWS. You will run the Flask app on [Gunicorn](https://gunicorn.org/), a Python WSGI HTTP server, proxied behind [nginx](https://nginx.org/), an HTTP proxy server.
 
-#### Nginx
-
-As a proxy server, nginx will receive requests from the outside world to pass to your WSGI server as well as listen for responses from the WSGI server to forward back to the outside world. Start nginx with the `nginx` command.
-
-The example `nginx.conf` in this repository is suitable and can be placed in either `/usr/local/nginx/conf/`, `/etc/nginx/`, or `/usr/local/etc/nginx/`. (Note that you have to run `nginx -s reload` if you change the configuration file.)
-
 #### Gunicorn
 
-It will be installed already in the virtual environment. Run with
+It will be installed already in the virtual environment. Run as [described here](https://docs.gunicorn.org/en/latest/run.html#gunicorn). `wsgi.py` imports Flask and starts the example, so to run the server on port 8080, you could use
 
-```bash
-gunicorn -b :4000 bot:app
 ```
+gunicorn -b 0.0.0.0:8080 'wsgi:app'
+```
+
+Be sure the environment variables are set before attempting to start Gunicorn or the server will fail to start. If all goes well, the output should look like this example:
+
+```
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Starting gunicorn 20.1.0
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Listening at: http://0.0.0.0:8080 (17775)
+[2023-04-14 12:03:37 -0700] [17775] [INFO] Using worker: sync
+[2023-04-14 12:03:37 -0700] [17777] [INFO] Booting worker with pid: 17777
+```
+
+Note that the output includes the daemon's PID. [Here are the different signals you can send to the Gunicorn daemon.](https://docs.gunicorn.org/en/stable/signals.html) For example, you could gracefully shut down your server with a `SIGTERM` signal sent to the PID listed in the second line of output:
+
+```
+kill -TERM 17775
+```
+
+#### Nginx
+
+As a proxy server, nginx will receive requests from the outside world to pass to your WSGI server as well as listen for responses from the WSGI server to forward back to the outside world.
+
+See [the Gunicorn docs about using nginx](https://docs.gunicorn.org/en/latest/deploy.html#nginx-configuration), where you can find a sample `nginx.conf` that can be placed under either `/usr/local/nginx/conf/`, `/etc/nginx/`, or `/usr/local/etc/nginx/`. [The nginx docs](https://nginx.org/en/docs/) include instructions to [configure a proxy](https://nginx.org/en/docs/beginners_guide.html#proxy) and [control nginx](https://nginx.org/en/docs/beginners_guide.html#control).
+
+If you would like to set up a systemd service to handle this process, [this tutorial can help](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04#step-4-configuring-gunicorn). It also includes [more information about proxying with nginx](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04#step-5-configuring-nginx-to-proxy-requests).
