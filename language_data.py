@@ -158,6 +158,9 @@ class LangData:
             for /stats
         get_stats_usage_err -- get the generic /stats error message for bad
             syntax
+        get_stats_headers -- get the CSV headers for a /stats report
+        get_lastpost_headers -- get the CSV headers for a /lastpost report
+        get_list_headers -- get the CSV headers for a /list report
     """
 
     def __init__(self):
