@@ -1,4 +1,4 @@
-# WhatsApp Group Chat Translation Bot
+# TransLingo
 
 See also [information on available bot commands](https://github.com/hkcountryman/capstone-bot/blob/main/docs/Admin.md) and [a list of supported languages and their codes](https://github.com/hkcountryman/capstone-bot/blob/main/docs/Languages.md).
 
