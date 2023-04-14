@@ -59,19 +59,27 @@ err_msgs.add_name_err = "Choose a different username."  # display name taken
 err_msgs.role_err = "Choose a valid role:"  # preface errors
 err_msgs.roles = " (user | admin | super)"  # valid roles
 err_msgs.exists_err = "User already exists."  # /add existing user
-err_msgs.remove_example = "/remove +12345678900"  # /remove example
+err_msgs.remove_example = "/remove +12345678900\n/remove username"  # /remove example
 err_msgs.unfound_err = "User not found."  # remove nonexistent user
 err_msgs.remove_self_err = "You cannot remove yourself."  # remove self
 err_msgs.remove_super_err = "You cannot remove a superuser."  # admin removes super
 # Invalid time frame
 err_msgs.stats_err = "Invalid time frame. Use format: 7 day(s)."
-err_msgs.stats_usage_err = "/stats +12345678900 1 day"
+err_msgs.stats_usage_err = "/stats 1 day +12345678900\n/stats 2 days username\n/stats"
 
 
 # Strings for success messages
 success = SimpleNamespace()
 success.added = "New user added successfully."  # /add
-success.removed = "User removed successfully."
+success.removed = "User removed successfully."  # /remove
+success.stats = ["user", "phone number", "messages"]  # /stats column headers
+# /lastpost column headers
+success.lastpost = ["user", "phone number", "most recent message"]
+success.list_ = [
+    "user",
+    "phone number",
+    "language",
+    "type"]  # /list column headers
 
 
 class LangEntry(TypedDict):
@@ -105,6 +113,9 @@ class LangEntry(TypedDict):
     # Success messages
     added: str  # /add
     removed: str  # /remove
+    stats: str  # /stats column headers
+    lastpost: str  # /lastpost column headers
+    list_: str  # /list column headers
 
 
 class LangData:
@@ -192,7 +203,10 @@ class LangData:
                 "stats_err": "",
                 "stats_usage_err": "",
                 "added": "",
-                "removed": ""}
+                "removed": "",
+                "stats": "",
+                "lastpost": "",
+                "list_": ""}
         err_msgs.lang_list = "".join(
             ["Languages:"] + list(map(lambda l: (f"\n{l}"), self.names)))
 
@@ -587,6 +601,63 @@ class LangData:
                 # return it in English
                 return err_msgs.stats_usage_err
         return self.entries[code]["stats_usage_err"]
+
+    def get_stats_headers(self, code: str) -> str:
+        """Get translated column headers for the /stats report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["stats"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.stats]
+                self.entries[code]["stats"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.stats)
+        return self.entries[code]["stats"]
+
+    def get_lastpost_headers(self, code: str) -> str:
+        """Get translated column headers for the /lastpost report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["lastpost"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.lastpost]
+                self.entries[code]["lastpost"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.lastpost)
+        return self.entries[code]["lastpost"]
+
+    def get_list_headers(self, code: str) -> str:
+        """Get translated column headers for the /list report.
+
+        Arguments:
+            code -- Code of the language to translate the output to
+
+        Returns:
+            The translated output.
+        """
+        if self.entries[code]["list_"] == "":
+            try:
+                translated = [translate_to(x, code) for x in success.list_]
+                self.entries[code]["list_"] = ", ".join(translated)
+            except (TimeoutError, requests.ReadTimeout, requests.ConnectionError, requests.HTTPError):
+                # If we can't translate the error at the moment, compromise and
+                # return it in English
+                return ", ".join(success.list_)
+        return self.entries[code]["list_"]
 
 
 def translate_to(text: str, target_lang: str) -> str:
