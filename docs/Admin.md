@@ -24,18 +24,24 @@ Required Fields:
 Required Fields:
 - WhatsApp number - User's WhatsApp number (__Must__ include '+' and country code)
 
+<br>__OR__
+```
+/remove [Display name]
+```
+Required Fields:
+- Display name - User's display name (__No spaces allowed__)
+
 <br>Error(s):
 - Incorrect number of arguments delimited by space(s)
 - WhatsApp number does not exist in the group chat
 
 <br>__Note:__ An administrator cannot remove himself/herself. An administrator also cannot remove a super administrator.
 
-
 ### List all Users
+A list of users in the group chat will be displayed in a readable format.
 ```
 /list
 ```
-A list of users in the group chat will be displayed in JSON format.
 
 
 ### Test Command
@@ -49,15 +55,51 @@ Required Fields:
 
 
 ### Generate Statistics
-Option 1:
+#### Number of messages by a specific user within a given time frame
+A text message containing the specific user's number of messages will be displayed.
 ```
-/stats [WhatsApp number] [Time length]
+/stats [Time length] days [WhatsApp number]
+```
+Required Fields:
+- Time length - Number of days
+- WhatsApp number - User's WhatsApp number (__Must__ include '+' and country code)
+
+<br>__OR__
+```
+/stats [Time length] days [Display Name]
+```
+Required Fields:
+- Time length - Number of days
+- Display name - User's display name (__No spaces allowed__)
+
+#### Number of messages by all users within a given time frame
+A text message containing all users' corresponding number of messages will be displayed in a readable format.
+```
+/stats [Time length] days
+```
+Required Fields:
+- Time length - Number of days
+
+#### Timestamp of the last message by a specific user
+A text message containing the specific user's most recent message timestamp will be displayed.
+```
+/lastpost [WhatsApp number]
 ```
 Required Fields:
 - WhatsApp number - User's WhatsApp number (__Must__ include '+' and country code)
-- Time length - 
 
-<br>Option 2:
+<br>__OR__
+```
+/lastpost [Display Name]
+```
+Required Fields:
+- Display name - User's display name (__No spaces allowed__)
 
-#### Changing User Language, User Type and More
+#### Timestamp of the last message by all users
+A text message containing all users' corresponding most recent message timestamp will be displayed in a readable format.
+```
+/lastpost
+```
+
+### Changing User Language, User Type and More
 Please utilize the `/remove` and `/add` commands, in order, to update a user's settings. 

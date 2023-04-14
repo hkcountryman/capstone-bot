@@ -120,6 +120,7 @@ python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+<br>The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
 
 #### Dependencies
 
@@ -281,6 +282,7 @@ python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
+<br>The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
 
 ### To deploy
 
