@@ -340,7 +340,7 @@ class Chatbot:
                 return ""
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                ) or (not new_contact[1:].isdigit()):
+                    ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
             # start attempt to add contact
@@ -595,8 +595,8 @@ class Chatbot:
             # object with keys that are dates and values that are messages sent
             # on that date. All users should have an entry.
             if len(timestamps.keys()) == 0:
-                # TODO: convert to a translated error
-                return f"User {target_name} ({phone}) has not posted any messages yet."
+                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
+                    sender_lang)
             last_post_time = max(timestamps, key=datetime.fromisoformat)
             report += f"\n{target_name}, {phone}, {last_post_time}"
         # All users
@@ -613,8 +613,8 @@ class Chatbot:
                         timestamps, key=datetime.fromisoformat)
                     last_posts[user] = f"\n{name}, {user}, {last_post_time}"
             if not last_posts:
-                # TODO: convert to a translated error
-                return "No messages have been posted yet."
+                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
+                    sender_lang)
             report += "".join(last_posts)
         # Return report
         return report
