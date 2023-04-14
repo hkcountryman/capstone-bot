@@ -138,9 +138,8 @@ else:
         key2 = file.read()
 
 # Create logs file
-# TODO: update to new format
-logs_dict: Dict[str, Dict[str, List[str]]] = dict(
-    {f"whatsapp:{phone_number}": {"timestamps": []}})
+logs_dict: Dict[str, Dict[str, int]] = dict(
+    {f"whatsapp:{phone_number}": {}})
 logs_list = json.dumps(logs_dict, indent=4)
 # Create byte version of JSON string
 logs_list_byte = logs_list.encode("utf-8")
