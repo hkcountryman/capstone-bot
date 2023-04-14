@@ -478,17 +478,20 @@ class Chatbot:
         if not msg.startswith("/") and not (msg.startswith(pm_char) and
                                             len(msg.split()) <= 1):
             timestamp = datetime.now().strftime("%Y-%m-%d")
-            if sender_contact in self.logs:  # sender is already in log file...
-                self.logs[sender_contact]["timestamps"].append(timestamp)
-            else:  # otherwise add them to logs before adding timestamp
-                self.logs[sender_contact] = {"timestamps": [timestamp]}
+            if sender_contact in self.logs:  # sender is already in the log file...
+                if timestamp in self.logs[sender_contact]:
+                    self.logs[sender_contact][timestamp] += 1
+                else:
+                    self.logs[sender_contact][timestamp] = 1
+            else:  # otherwise, add them to logs before adding timestamp
+                self.logs[sender_contact] = {timestamp: 1}
 
             # Remove messages older than 1 year
             one_year_ago = datetime.now() - timedelta(days=365)
             for contact_key in self.logs:
-                self.logs[contact_key]["timestamps"] = [
-                    ts for ts in self.logs[contact_key]["timestamps"] if
-                    datetime.fromisoformat(ts) >= one_year_ago]
+                self.logs[contact_key] = {
+                    ts: count for ts, count in self.logs[contact_key].items() if
+                    datetime.fromisoformat(ts) >= one_year_ago}
 
             # Save the updated logs to logs.json
             # Convert the logs dictionary to a formatted JSON string
@@ -557,11 +560,10 @@ class Chatbot:
         # Tally timestamps for a specific user
         if target_contact != "":
             message_count = 0
-            for timestamp_str in self.logs[target_contact]["timestamps"]:
-                # TODO: above will be self.logs[target_contact].keys()
+            for timestamp_str, count in self.logs[target_contact].items():
                 timestamp = datetime.fromisoformat(timestamp_str)
                 if start_date <= timestamp <= end_date:
-                    message_count += 1
+                    message_count += count
             phone = target_contact.split(":")[1]
             report += f"\n{target_name}, {phone}, {message_count}"
         # Tally total messages for all users
@@ -571,7 +573,7 @@ class Chatbot:
                 name = self.subscribers[contact_key]["name"]
                 phone = contact_key.split(":")[1]
                 user_message_count = 0
-                for timestamp_str in self.logs[contact_key]["timestamps"]:
+                for timestamp_str in self.logs[contact_key]:
                     # TODO: above will be self.logs[contact_key].keys()
                     timestamp = datetime.fromisoformat(timestamp_str)
                     if start_date <= timestamp <= end_date:
@@ -617,31 +619,27 @@ class Chatbot:
                 target_name = target_user
             # Locate user's timestamps
             phone = target_number.split(":")[1]  # remove "whatsapp:"
-            timestamps = self.logs[target_number]["timestamps"]
+            timestamps = self.logs[target_number]
             # TODO: the above will change to self.logs[target_number], an
             # object with keys that are dates and values that are messages sent
             # on that date. All users should have an entry.
-            if len(timestamps.keys()) == 0:
-                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
-                    sender_lang)
+            if len(timestamps) == 0:
+                return Chatbot.languages.get_no_posts(sender_lang)
             last_post_time = max(timestamps, key=datetime.fromisoformat)
             report += f"\n{target_name}, {phone}, {last_post_time}"
         # All users
         else:
             last_posts = {}
-            for user in self.logs:
-                timestamps = self.logs[user]["timestamps"]
+            for user, user_logs in self.logs.items():
                 # TODO: the above will change to self.logs[user], an
                 # object with keys that are dates and values that are messages
                 # sent on that date. All users should have an entry.
-                if len(timestamps.keys()) != 0:
+                if len(user_logs) != 0:
                     name = self.subscribers[user]["name"]
-                    last_post_time = max(
-                        timestamps, key=datetime.fromisoformat)
+                    last_post_time = max(user_logs, key=datetime.fromisoformat)
                     last_posts[user] = f"\n{name}, {user}, {last_post_time}"
             if not last_posts:
-                return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
-                    sender_lang)
+                return Chatbot.languages.get_no_posts(sender_lang)
             report += "".join(last_posts)
         # Return report
         return report
