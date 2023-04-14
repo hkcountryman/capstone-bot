@@ -531,10 +531,10 @@ class Chatbot:
         if target_contact != "":
             message_count = 0
             for timestamp_str in self.logs[target_contact]["timestamps"]:
+                # TODO: above will be self.logs[target_contact].keys()
                 timestamp = datetime.fromisoformat(timestamp_str)
                 if start_date <= timestamp <= end_date:
                     message_count += 1
-            # TODO: convert to a translated success message
             phone = target_contact.split(":")[1]
             report += f"\n{target_name}, {phone}, {message_count}"
         # Tally total messages for all users
