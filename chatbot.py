@@ -13,6 +13,8 @@ Classes:
 """
 
 import json
+import asyncio
+import aiofiles
 import os
 import re
 from datetime import datetime, timedelta
@@ -159,8 +161,14 @@ class Chatbot:
                 unencrypted_data)
         except BaseException:  # pylint: disable=broad-exception-caught
             # Handle corrupted file
-            # TODO: Print message to server logs file that original file is
+            # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
+            with open("server_log.txt", "a") as file:
+                timestamp = datetime.now().strftime("%Y-%m-%d")
+                file.write(
+                    timestamp +
+                    ": Corrupted subscribers.json file...using backup file. Newest data may be missing.\n")
+
             with open(self.backup_file, "rb") as file:
                 backup_encrypted_data = file.read()
             backup_unencrypted_data = f.decrypt(
@@ -177,12 +185,18 @@ class Chatbot:
         try:
             unencrypted_logs_data = f.decrypt(
                 encrypted_logs_data).decode("utf-8")
-            # TODO: Put unecrypted data into dictionary
+            # Put unecrypted data into dictionary
             self.logs = json.loads(unencrypted_logs_data)
         except BaseException:  # pylint: disable=broad-exception-caught
             # Handle corrupted file
-            # TODO: Print message to server logs file that original file is
+            # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
+            with open("server_log.txt", "a") as file:
+                timestamp = datetime.now().strftime("%Y-%m-%d")
+                file.write(
+                    timestamp +
+                    ": Corrupted logs.json file...using backup file. Latest logs may be missing.\n")
+
             with open(self.backup_logs_file, "rb") as file:
                 backup_encrypted_logs_data = file.read()
             backup_unencrypted_logs_data = f.decrypt(
@@ -479,10 +493,42 @@ class Chatbot:
                 self.logs[contact_key] = {
                     ts: count for ts, count in self.logs[contact_key].items() if
                     datetime.fromisoformat(ts) >= one_year_ago}
+                    
+            # Save the updated logs to logs.json
+            # Convert the logs dictionary to a formatted JSON string
+            logs_list = json.dumps(self.logs, indent=4)
+            # Create byte version of JSON string
+            logs_list_byte = logs_list.encode("utf-8")
+            f = Fernet(self.key2)
+            encrypted_logs_data = f.encrypt(logs_list_byte)
+            with open(self.logs_file, "wb") as file:
+                file.write(encrypted_logs_data)
+            # Copy data to backup file
+            with open(self.logs_file, "rb") as fileone, \
+                    open(self.backup_logs_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
 
-            # TODO: Kevin, does this need to be encrypted or anything?
-            with open(self.logs_file, "w", encoding="utf-8") as file:
-                json.dump(self.logs, file, indent=2)
+            # asyncio.run(self._save_logs())
+    '''
+    async def _save_logs(self) -> None:
+        """Asynchronously store logs into the proper storage file.
+        """
+        # Save the updated logs to logs.json
+        # Convert the logs dictionary to a formatted JSON string
+        logs_list = json.dumps(self.logs, indent=4)
+        # Create byte version of JSON string
+        logs_list_byte = logs_list.encode("utf-8")
+        f = Fernet(self.key2)
+        encrypted_logs_data = f.encrypt(logs_list_byte)
+        async with aiofiles.open(self.logs_file, "wb") as file:
+            await file.write(encrypted_logs_data)
+        # Copy data to backup file
+        async with aiofiles.open(self.logs_file, "rb") as fileone, \
+                aiofiles.open(self.backup_logs_file, "wb") as filetwo:
+            async for line in fileone:
+                await filetwo.write(line)
+    '''
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for one or all users.
