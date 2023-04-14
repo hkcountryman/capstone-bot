@@ -1,4 +1,4 @@
-## Language Codes
+# Language Codes
 
 | Language Code | Language             |
 | ------------- | -------------------- |

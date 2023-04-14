@@ -1,5 +1,7 @@
 # WhatsApp Group Chat Translation Bot
 
+See also [information on available bot commands](https://github.com/hkcountryman/capstone-bot/blob/main/docs/Admin.md) and [a list of supported languages and their codes](https://github.com/hkcountryman/capstone-bot/blob/main/docs/Languages.md).
+
 ## About
 
 This WhatsApp bot holds one-on-one conversations with each subscriber in a "group chat". Members can be added by their WhatsApp number and have roles (user, admin, or superuser) as well as preferred languages. When a user messages the bot, the message is forwarded to all other members of the group, translated into their preferred language.
@@ -120,7 +122,8 @@ python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
-<br>The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
+
+The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
 
 #### Dependencies
 
@@ -282,7 +285,8 @@ python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
-<br>The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
+
+The script also generates a JSON file for messaging logging to be utilized for statistics generation. The JSON file is encrypted in the same manner with a different AES 128-bit cipher key.
 
 ### To deploy
 
