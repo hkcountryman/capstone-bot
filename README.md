@@ -26,7 +26,7 @@ This WhatsApp bot holds one-on-one conversations with each subscriber in a "grou
 
 Begin by cloning the repository and entering its directory:
 
-```bash
+```
 git clone https://github.com/hkcountryman/capstone-bot
 cd capstone-bot
 ```
@@ -125,7 +125,7 @@ The script generates a JSON file that includes the superuser as a user with thei
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
 
-```bash
+```
 python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
@@ -137,7 +137,7 @@ Note: On a Windows system, run
 
 **Any time you add a dependency, it must be added to `requirements.txt` via**
 
-```bash
+```
 pip freeze > requirements.txt
 ```
 
@@ -145,7 +145,7 @@ You won't need to reinstall dependencies unless they change and you won't need t
 
 After activating the virtual environment, run
 
-```bash
+```
 pre-commit install
 ```
 
@@ -157,9 +157,13 @@ If you wish to host your own LibreTranslate server, you may do so according to t
 
 If you choose to run the server locally, one easy way is through Docker:
 
-```bash
+```
 docker-compose up -d --build
 ```
+
+While developing, do not allow your computer to sleep with a self-hosted LibreTranslate server running. Upon waking it will likely claim to be "healthy" if you run `docker ps` but it will be incapable of responding to requests, claiming that all languages are "not supported" and responding with a 400 HTTP status code.
+
+Note that self-hosted Docker containers may take some time to start up. Run `docker ps` to check their status (they should be "healthy", not "starting") and do not attempt to visit http://0.0.0.0:5000/ or make requests to LibreTranslate until after the server has started, as that may cause the container to have the "unhealthy" status.
 
 ### Running
 
@@ -187,7 +191,7 @@ flask run --debugger --port 8080  # run Flask in debug mode for hot reloading wh
 
 Otherwise, first set the environment variables `TWILIO_NUMBER`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `LIBRETRANSLATE`, and optionally `TRANSLATION_TIMEOUT`, the values of which are described above under ["Setup"](https://github.com/hkcountryman/capstone-bot#visual-studio-code):
 
-```bash
+```
 export TWILIO_NUMBER="+14155238886"
 export TWILIO_ACCOUNT_SID="<account SID>"
 export TWILIO_AUTH_TOKEN="<auth token>"
@@ -197,13 +201,13 @@ export TRANSLATION_TIMEOUT=<translation request timeout seconds>
 
 Then, with the virtual environment active, run the server:
 
-```bash
+```
 flask run --debugger --port 8080
 ```
 
 Next, use ngrok to expose a temporary, public URL for the server:
 
-```bash
+```
 ngrok http 8080
 ```
 
@@ -231,7 +235,7 @@ Now you can try texting the number you texted earlier for the Sandbox.
 
 Begin by cloning the repository and entering its directory:
 
-```bash
+```
 git clone https://github.com/hkcountryman/capstone-bot
 cd capstone-bot
 ```
@@ -240,7 +244,7 @@ cd capstone-bot
 
 You will need to [create a virtual environment](https://docs.python.org/3/tutorial/venv.html) and install all required dependencies. Inside this repository, run
 
-```bash
+```
 python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
@@ -252,9 +256,11 @@ If you wish to host your own LibreTranslate server, you may do so according to t
 
 If you choose to run the server locally, one easy way is through Docker:
 
-```bash
+```
 docker-compose up -d --build
 ```
+
+Note that self-hosted Docker containers may take some time to start up. Run `docker ps` to check their status (they should be "healthy", not "starting") and do not attempt to visit http://0.0.0.0:5000/ or make requests to LibreTranslate until after the server has started, as that may cause the container to have the "unhealthy" status.
 
 #### Environment variables
 
@@ -268,10 +274,10 @@ The system must have the following environment variables set:
 
 #### JSON user file
 
-The superuser must run the setup script prior to starting the server:
+The superuser must run the setup script prior to starting the server (note that it requires activation of the virtual environment to run):
 
 ```
-./setup.py [JSON file name]
+python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including country code) and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
@@ -288,8 +294,8 @@ The example `nginx.conf` in this repository is suitable and can be placed in eit
 
 #### Gunicorn
 
-It will be installed already in the virtual environment. Run with
+It will be installed already in the virtual environment. Run as [described here](https://docs.gunicorn.org/en/latest/run.html#gunicorn). For example, you may use
 
-```bash
-gunicorn -b :4000 bot:app
+```
+gunicorn -b localhost:8080 ''
 ```
