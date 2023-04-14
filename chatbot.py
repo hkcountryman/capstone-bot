@@ -451,6 +451,13 @@ class Chatbot:
                 self.logs[sender_contact]["timestamps"].append(timestamp)
             else:  # otherwise add them to logs before adding timestamp
                 self.logs[sender_contact] = {"timestamps": [timestamp]}
+
+            # Remove messages older than 1 year
+            one_year_ago = datetime.now() - timedelta(days=365)
+            for contact_key in self.logs:
+                self.logs[contact_key]["timestamps"] = [ts for ts in self.logs[contact_key]["timestamps"]
+                                                        if datetime.fromisoformat(ts) >= one_year_ago]
+
             # TODO: Kevin, does this need to be encrypted or anything?
             with open(self.logs_file, "w", encoding="utf-8") as file:
                 json.dump(self.logs, file, indent=2)
