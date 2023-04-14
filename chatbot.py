@@ -32,9 +32,7 @@ consts = SimpleNamespace()
 consts.TEST = "/test"  # test translate
 consts.ADD = "/add"  # add user
 consts.REMOVE = "/remove"  # remove user
-consts.ADMIN = "/admin"  # toggle admin vs. user role for user
 consts.LIST = "/list"  # list all users
-consts.LANG = "/lang"  # set language for user
 consts.STATS = "/stats"  # get stats for user
 consts.LASTPOST = "/lastpost"  # get last post for user
 consts.TOTALSTATS = "/totalstats"  # get total stats for all users
@@ -86,9 +84,7 @@ class Chatbot:
         consts.TEST,
         consts.ADD,
         consts.REMOVE,
-        consts.ADMIN,
         consts.LIST,
-        consts.LANG,
         consts.STATS,
         consts.LASTPOST,
         consts.TOTALSTATS]
@@ -460,11 +456,11 @@ class Chatbot:
                 json.dump(self.logs, file, indent=2)
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
-        """Generate message statistics for a specified user and time frame.
+        """Generate message statistics for a specified user or all users and a time frame.
 
         Arguments:
             sender_contact -- WhatsApp contact info of the sender
-            msg -- the message sent to the bot, containing the user contact
+            msg -- the message sent to the bot, containing the user contact,
                 and the time frame for statistics
 
         Returns:
@@ -473,18 +469,20 @@ class Chatbot:
         """
         sender_lang = self.subscribers[sender_contact]["lang"]
         split_msg = msg.split()  # Check if there are enough arguments
-        if len(split_msg) == 4:
-            target_contact = split_msg[1]
-            days_str = split_msg[2]
-            unit = split_msg[3]
+        if len(split_msg) in (3, 4):
+            days_str = split_msg[1]
+            unit = split_msg[2]
+
+            if len(split_msg) == 4:
+                target_contact = split_msg[3].strip().lower()
+            else:
+                target_contact = ""
+
             time_frame = f"{days_str}{unit}"
         else:
             return Chatbot.languages.get_stats_usage_err(  # type: ignore [union-attr]
                 sender_lang)
-        target_contact_key = f"whatsapp:{target_contact}"  # specified user
-        if target_contact_key not in self.subscribers:
-            return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
-                sender_lang)
+
         # Check if the time frame is valid
         pattern = r"(\d+)\s*(\w+)"
         match = re.match(pattern, time_frame)
@@ -496,24 +494,68 @@ class Chatbot:
         else:
             return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
                 sender_lang)
+
         # Calculate the start and end dates
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        # Tally timestamps
-        message_count = 0
-        for timestamp_str in self.logs[target_contact_key]["timestamps"]:
-            timestamp = datetime.fromisoformat(timestamp_str)
-            if start_date <= timestamp <= end_date:
-                message_count += 1
-        # TODO: convert to a translated success message
-        return f"User {target_contact} sent {message_count} messages."
+        if target_contact != "":
+
+            # Check if target_contact is a name, then get the corresponding phone number
+            for contact, user_info in self.subscribers.items():
+                if user_info["name"].lower() == target_contact or contact.split(":")[1].lower() == target_contact:
+                    target_contact = contact.split(":")[1]
+                    target_name = user_info["name"]
+                    break
+            else:
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            target_contact_key = f"whatsapp:{target_contact}"  # specified user
+            if target_contact_key not in self.subscribers:
+                return Chatbot.languages.get_unfound_err(  # type: ignore [union-attr]
+                    sender_lang)
+
+            # Tally timestamps for a specific user
+            message_count = 0
+            for timestamp_str in self.logs[target_contact_key]["timestamps"]:
+                timestamp = datetime.fromisoformat(timestamp_str)
+                if start_date <= timestamp <= end_date:
+                    message_count += 1
+
+            # TODO: convert to a translated success message
+            return f"{target_name} ({target_contact}) sent {message_count} msgs."
+        else:
+            # Tally total messages for all users and individual users
+            total_message_count = 0
+            user_message_counts = {}
+
+            for contact_key in self.logs:
+                user_message_count = 0
+                for timestamp_str in self.logs[contact_key]["timestamps"]:
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                    if start_date <= timestamp <= end_date:
+                        total_message_count += 1
+                        user_message_count += 1
+
+                user_message_counts[contact_key] = user_message_count
+
+            # Prepare the result string
+            result = f"Total messages sent by all users: {total_message_count}\n\n"
+
+            for contact_key, message_count in user_message_counts.items():
+                if message_count > 0:  # Only show if the user has sent messages
+                    user_name = self.subscribers[contact_key]["name"]
+                    user_phone = contact_key.split(":")[1]
+                    result += f"{user_name} ({user_phone}) sent {message_count} msgs.\n"
+
+            return result.strip()
 
     # TODO: target_user should work as both username and phone number
     def _get_last_post_time(
             self,
             user_contact: str,
             target_user: str = "") -> str:
-        """Get the latest post's timestamp for one or all users.
+        """Get the latest post's timestamp for a user or all users if no user specified.
 
         Arguments:
             user_contact -- the WhatsApp contact info of the user making this
@@ -570,51 +612,6 @@ class Chatbot:
                     f"{self.subscribers[user]['name']} ({user.split(':')[1]}): {timestamp}" for user,
                     timestamp in last_posts.items()])
             return f"Last post for all users:\n{last_post_messages}"
-
-    def _generate_total_stats(self, sender_contact: str, msg: str) -> str:
-        """Generate message statistics for all users in a specified time frame.
-
-        Arguments:
-            sender_contact -- WhatsApp contact info of the sender
-            msg -- the message sent to the bot, containing the time frame for
-                statistics
-
-        Returns:
-            A string containing the total message statistics or an error message
-                if the input is incorrect.
-        """
-        sender_lang = self.subscribers[sender_contact]["lang"]
-        split_msg = msg.split()
-        if len(split_msg) == 3:
-            days_str = split_msg[1]
-            unit = split_msg[2]
-            time_frame = f"{days_str}{unit}"
-        else:
-            return Chatbot.languages.get_stats_usage_err(  # type: ignore [union-attr]
-                sender_lang)
-        # Check if the time frame is valid
-        pattern = r"(\d+)\s*(\w+)"
-        match = re.match(pattern, time_frame)
-        if match:
-            days, unit = int(match.group(1)), match.group(2)
-            if unit not in ("day", "days"):
-                return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
-                    sender_lang)
-        else:
-            return Chatbot.languages.get_stats_err(  # type: ignore [union-attr]
-                sender_lang)
-        # Calculate the start and end dates
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-        # Tally total messages
-        total_message_count = 0
-        for contact_key in self.logs:
-            for timestamp_str in self.logs[contact_key]["timestamps"]:
-                timestamp = datetime.fromisoformat(timestamp_str)
-                if start_date <= timestamp <= end_date:
-                    total_message_count += 1
-        # TODO: convert to translated success message
-        return f"Total messages sent by all users: {total_message_count}"
 
     def _list_subscribers(self) -> str:
         """Generate a formatted list of subscribers with their data.
@@ -716,7 +713,6 @@ class Chatbot:
                             msg, sender_contact))
                 case consts.LIST:  # list all subscribers with their data
                     return self._reply(self._list_subscribers())
-
                 case consts.STATS:
                     stats = self._generate_stats(sender_contact, msg)
                     return self._reply(stats)
@@ -726,10 +722,6 @@ class Chatbot:
                     return self._reply(
                         self._get_last_post_time(
                             sender_contact, target_user))
-                case consts.TOTALSTATS:
-                    total_stats = self._generate_total_stats(
-                        sender_contact, msg)
-                    return self._reply(total_stats)
                 case _:  # just send a message
                     if word_1[0:1] == "/" and len(word_1) > 1:
                         return ""  # ignore invalid/unauthorized command
