@@ -406,8 +406,7 @@ class Chatbot:
                 sender_lang)
 
     def _remove_subscriber(self, msg: str, sender_contact: str) -> str:
-        """Remove a subscriber from the dictionary and save the dictionary.
-
+        """Remove a subscriber from the dictionary and save the dictionary
         to the JSON file.
 
         Arguments:
@@ -483,6 +482,7 @@ class Chatbot:
                 self.logs[sender_contact]["timestamps"].append(timestamp)
             else:  # otherwise add them to logs before adding timestamp
                 self.logs[sender_contact] = {"timestamps": [timestamp]}
+
             # Remove messages older than 1 year
             one_year_ago = datetime.now() - timedelta(days=365)
             for contact_key in self.logs:
@@ -504,27 +504,6 @@ class Chatbot:
                     open(self.backup_logs_file, "wb") as filetwo:
                 for line in fileone:
                     filetwo.write(line)
-
-            # asyncio.run(self._save_logs())
-    '''
-    async def _save_logs(self) -> None:
-        """Asynchronously store logs into the proper storage file.
-        """
-        # Save the updated logs to logs.json
-        # Convert the logs dictionary to a formatted JSON string
-        logs_list = json.dumps(self.logs, indent=4)
-        # Create byte version of JSON string
-        logs_list_byte = logs_list.encode("utf-8")
-        f = Fernet(self.key2)
-        encrypted_logs_data = f.encrypt(logs_list_byte)
-        async with aiofiles.open(self.logs_file, "wb") as file:
-            await file.write(encrypted_logs_data)
-        # Copy data to backup file
-        async with aiofiles.open(self.logs_file, "rb") as fileone, \
-                aiofiles.open(self.backup_logs_file, "wb") as filetwo:
-            async for line in fileone:
-                await filetwo.write(line)
-    '''
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for one or all users.
