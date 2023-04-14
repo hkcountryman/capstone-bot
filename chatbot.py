@@ -454,10 +454,12 @@ class Chatbot:
                 return Chatbot.languages.get_remove_super_err(  # type: ignore [union-attr]
                     sender_lang)
             else:
+                # Delete subscriber
                 name = self.subscribers[user_contact]["name"]
                 del self.display_names[name]
                 del self.subscribers[user_contact]
-
+                # Delete their chat logs
+                del self.logs[user_contact]
             # Save the updated subscribers to subscribers.json
             # Convert the dictionary of subscribers to a formatted JSON string
             subscribers_list = json.dumps(self.subscribers, indent=4)
@@ -472,9 +474,22 @@ class Chatbot:
                     open(self.backup_file, "wb") as filetwo:
                 for line in fileone:
                     filetwo.write(line)
+            # Save updated chat logs to logs.json
+            logs_list = json.dumps(self.subscribers, indent=4)
+            # Create byte version of JSON string
+            logs_list_byte = logs_list.encode("utf-8")
+            f = Fernet(self.key2)
+            encrypted_data = f.encrypt(logs_list_byte)
+            with open(self.logs_file, "wb") as file:
+                file.write(encrypted_data)
+            # Copy data to backup file
+            with open(self.logs_file, "rb") as fileone, \
+                    open(self.backup_logs_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
+            # Success!
             return Chatbot.languages.get_remove_success(  # type: ignore [union-attr]
                 sender_lang)
-            # TODO: also remove subscriber's chat logs
         else:
             return Chatbot.languages.get_remove_err(  # type: ignore [union-attr]
                 sender_lang)
