@@ -35,7 +35,6 @@ consts.REMOVE = "/remove"  # remove user
 consts.LIST = "/list"  # list all users
 consts.STATS = "/stats"  # get stats for user
 consts.LASTPOST = "/lastpost"  # get last post for user
-consts.TOTALSTATS = "/totalstats"  # get total stats for all users
 
 # Roles for users in JSON file
 consts.USER = "user"  # can only execute test translation command
@@ -86,8 +85,7 @@ class Chatbot:
         consts.REMOVE,
         consts.LIST,
         consts.STATS,
-        consts.LASTPOST,
-        consts.TOTALSTATS]
+        consts.LASTPOST]
     """All slash commands for the bot."""
 
     languages: LangData | None = None
