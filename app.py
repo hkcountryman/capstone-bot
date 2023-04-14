@@ -35,7 +35,6 @@ def _get_incoming_msg(req: Request) -> Tuple[str, str, List[str]]:
         "From", type=str)  # type: ignore [assignment]
     media_urls = [req.values[k]
                   for k in req.values.keys() if k.startswith("MediaUrl")]
-
     return (msg, sender_contact, media_urls)
 
 
