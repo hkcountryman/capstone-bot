@@ -354,7 +354,7 @@ class Chatbot:
                 return ""
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                ) or (not new_contact[1:].isdigit()):
+                    ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
             # start attempt to add contact
@@ -490,8 +490,23 @@ class Chatbot:
                     ts for ts in self.logs[contact_key]["timestamps"] if
                     datetime.fromisoformat(ts) >= one_year_ago]
 
-            asyncio.run(self._save_logs())
+            # Save the updated logs to logs.json
+            # Convert the logs dictionary to a formatted JSON string
+            logs_list = json.dumps(self.logs, indent=4)
+            # Create byte version of JSON string
+            logs_list_byte = logs_list.encode("utf-8")
+            f = Fernet(self.key2)
+            encrypted_logs_data = f.encrypt(logs_list_byte)
+            with open(self.logs_file, "wb") as file:
+                file.write(encrypted_logs_data)
+            # Copy data to backup file
+            with open(self.logs_file, "rb") as fileone, \
+                    open(self.backup_logs_file, "wb") as filetwo:
+                for line in fileone:
+                    filetwo.write(line)
 
+            # asyncio.run(self._save_logs())
+    '''
     async def _save_logs(self) -> None:
         """Asynchronously store logs into the proper storage file.
         """
@@ -509,6 +524,7 @@ class Chatbot:
                 aiofiles.open(self.backup_logs_file, "wb") as filetwo:
             async for line in fileone:
                 await filetwo.write(line)
+    '''
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for one or all users.
