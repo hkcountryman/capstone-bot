@@ -7,7 +7,7 @@ data to be used for all of the included Chatbot functionality.
 import json
 import os
 import sys
-from typing import Dict, List
+from typing import Dict
 
 from cryptography.fernet import Fernet  # type: ignore [import]
 
@@ -25,6 +25,7 @@ KEY_FILE = "subscribers_key.key"
 LOGS_FILE = "logs.json"
 BACKUP_LOGS_FILE = "logs_bak.json"
 LOGS_KEY_FILE = "logs_key.key"
+SERVER_LOG = "server_log.txt"
 
 
 print("Setting up user data file...\n")
@@ -171,5 +172,15 @@ except FileExistsError:
     print(
         f"A file under {JSON_DIR}/{BACKUP_LOGS_FILE} already exists. " +
         "Delete and try again.")
+    sys.stdout.write(RESET)
+    sys.exit(1)
+
+# Create server log
+try:
+    with open(SERVER_LOG, "x", encoding="utf-8"):
+        pass
+except FileExistsError:
+    sys.stdout.write(BOLD + RED)
+    print(f"A file under {SERVER_LOG} already exists. Delete and try again.")
     sys.stdout.write(RESET)
     sys.exit(1)

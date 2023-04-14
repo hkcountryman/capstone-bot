@@ -12,15 +12,15 @@ Classes:
         associated WhatsApp bot
 """
 
+# import asyncio
 import json
-import asyncio
-import aiofiles
 import os
 import re
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
 
+# import aiofiles
 import requests
 from cryptography.fernet import Fernet
 from twilio.rest import Client
@@ -163,7 +163,7 @@ class Chatbot:
             # Handle corrupted file
             # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
-            with open("server_log.txt", "a") as file:
+            with open("server_log.txt", "a", encoding="utf-8") as file:
                 timestamp = datetime.now().strftime("%Y-%m-%d")
                 file.write(
                     timestamp +
@@ -191,7 +191,7 @@ class Chatbot:
             # Handle corrupted file
             # Print message to server logs file that original file is
             # corrupted...recent data may not have been saved.
-            with open("server_log.txt", "a") as file:
+            with open("server_log.txt", "a", encoding="utf-8") as file:
                 timestamp = datetime.now().strftime("%Y-%m-%d")
                 file.write(
                     timestamp +
@@ -201,7 +201,6 @@ class Chatbot:
                 backup_encrypted_logs_data = file.read()
             backup_unencrypted_logs_data = f.decrypt(
                 backup_encrypted_logs_data).decode("utf-8")
-            # TODO: Put unecrypted data into dictionary
             self.logs = json.loads(backup_unencrypted_logs_data)
 
     def _reply(self, msg_body: str) -> str:
@@ -493,7 +492,7 @@ class Chatbot:
                 self.logs[contact_key] = {
                     ts: count for ts, count in self.logs[contact_key].items() if
                     datetime.fromisoformat(ts) >= one_year_ago}
-                    
+
             # Save the updated logs to logs.json
             # Convert the logs dictionary to a formatted JSON string
             logs_list = json.dumps(self.logs, indent=4)
@@ -510,25 +509,23 @@ class Chatbot:
                     filetwo.write(line)
 
             # asyncio.run(self._save_logs())
-    '''
-    async def _save_logs(self) -> None:
-        """Asynchronously store logs into the proper storage file.
-        """
-        # Save the updated logs to logs.json
-        # Convert the logs dictionary to a formatted JSON string
-        logs_list = json.dumps(self.logs, indent=4)
-        # Create byte version of JSON string
-        logs_list_byte = logs_list.encode("utf-8")
-        f = Fernet(self.key2)
-        encrypted_logs_data = f.encrypt(logs_list_byte)
-        async with aiofiles.open(self.logs_file, "wb") as file:
-            await file.write(encrypted_logs_data)
-        # Copy data to backup file
-        async with aiofiles.open(self.logs_file, "rb") as fileone, \
-                aiofiles.open(self.backup_logs_file, "wb") as filetwo:
-            async for line in fileone:
-                await filetwo.write(line)
-    '''
+    # async def _save_logs(self) -> None:
+    #     """Asynchronously store logs into the proper storage file.
+    #     """
+    #     # Save the updated logs to logs.json
+    #     # Convert the logs dictionary to a formatted JSON string
+    #     logs_list = json.dumps(self.logs, indent=4)
+    #     # Create byte version of JSON string
+    #     logs_list_byte = logs_list.encode("utf-8")
+    #     f = Fernet(self.key2)
+    #     encrypted_logs_data = f.encrypt(logs_list_byte)
+    #     async with aiofiles.open(self.logs_file, "wb") as file:
+    #         await file.write(encrypted_logs_data)
+    #     # Copy data to backup file
+    #     async with aiofiles.open(self.logs_file, "rb") as fileone, \
+    #             aiofiles.open(self.backup_logs_file, "wb") as filetwo:
+    #         async for line in fileone:
+    #             await filetwo.write(line)
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for one or all users.
@@ -596,7 +593,6 @@ class Chatbot:
                 phone = contact_key.split(":")[1]
                 user_message_count = 0
                 for timestamp_str in self.logs[contact_key]:
-                    # TODO: above will be self.logs[contact_key].keys()
                     timestamp = datetime.fromisoformat(timestamp_str)
                     if start_date <= timestamp <= end_date:
                         total_message_count += 1
