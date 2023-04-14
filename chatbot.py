@@ -340,7 +340,7 @@ class Chatbot:
                 return ""
             # Check if the phone number is valid
             if (not new_contact.startswith("+")
-                    ) or (not new_contact[1:].isdigit()):
+                ) or (not new_contact[1:].isdigit()):
                 return Chatbot.languages.get_add_phone_err(  # type: ignore [union-attr]
                     sender_lang)
             # start attempt to add contact
@@ -551,7 +551,7 @@ class Chatbot:
                         total_message_count += 1
                         user_message_count += 1
                 report += f"\n{name}, {phone}, {user_message_count}"
-            report += f"\n,,{total_message_count}"  # sum
+            report += f"\n\nTOTAL: {total_message_count}"  # sum
         # Return report
         return report
 
@@ -594,7 +594,9 @@ class Chatbot:
             # TODO: the above will change to self.logs[target_number], an
             # object with keys that are dates and values that are messages sent
             # on that date. All users should have an entry.
-            if len(timestamps.keys()) == 0:
+            # TODO: comment this back in
+            # if len(timestamps.keys()) == 0:
+            if len(timestamps) == 0:  # TODO: remove
                 return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
                     sender_lang)
             last_post_time = max(timestamps, key=datetime.fromisoformat)
@@ -607,15 +609,18 @@ class Chatbot:
                 # TODO: the above will change to self.logs[user], an
                 # object with keys that are dates and values that are messages
                 # sent on that date. All users should have an entry.
-                if len(timestamps.keys()) != 0:
+                # TODO: comment this back in
+                # if len(timestamps.keys()) != 0:
+                if len(timestamps) != 0:  # TODO: remove
                     name = self.subscribers[user]["name"]
+                    phone = user.split(":")[1]
                     last_post_time = max(
                         timestamps, key=datetime.fromisoformat)
-                    last_posts[user] = f"\n{name}, {user}, {last_post_time}"
+                    last_posts[user] = f"{name}, {phone}, {last_post_time}"
             if not last_posts:
                 return Chatbot.languages.get_no_posts(  # type: ignore [union-attr]
                     sender_lang)
-            report += "".join(last_posts)
+            report += "\n" + "\n".join(last_posts)
         # Return report
         return report
 
