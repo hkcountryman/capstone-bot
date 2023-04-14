@@ -113,10 +113,10 @@ Now you can run the server from inside the IDE.
 
 #### JSON user file
 
-The superuser must run the setup script prior to starting the server:
+The superuser must run the setup script prior to starting the server (note that it requires activation of the virtual environment to run):
 
 ```
-./setup.py [JSON file name]
+python3 ./setup.py
 ```
 
 The script generates a JSON file that includes the superuser as a user with their Whatsapp phone number (including '+' and country code), their preferred display name (no spaces allowed), and their preferred language code. The JSON file is encrypted via an [AES 128-bit cipher](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key.
