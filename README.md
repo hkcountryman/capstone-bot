@@ -1,5 +1,7 @@
 # TransLingo
 
+![image](https://user-images.githubusercontent.com/62478826/233721919-cdcd0502-8a07-4554-9e5b-08cc173e36e3.png)
+
 ## About
 
 This WhatsApp bot holds one-on-one conversations with each subscriber in a "group chat". Members can be added by their WhatsApp number and have roles (user, admin, or superuser) as well as preferred languages. When a user messages the bot, the message is forwarded to all other members of the group, translated into their preferred language.

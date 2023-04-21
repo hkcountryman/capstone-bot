@@ -12,7 +12,6 @@ Classes:
         associated WhatsApp bot
 """
 
-# import asyncio
 import json
 import os
 import re
@@ -20,7 +19,6 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, TypedDict
 
-# import aiofiles
 import requests
 from cryptography.fernet import Fernet
 from twilio.rest import Client
@@ -531,25 +529,6 @@ class Chatbot:
                     open(self.backup_logs_file, "wb") as filetwo:
                 for line in fileone:
                     filetwo.write(line)
-
-            # asyncio.run(self._save_logs())
-    # async def _save_logs(self) -> None:
-    #     """Asynchronously store logs into the proper storage file.
-    #     """
-    #     # Save the updated logs to logs.json
-    #     # Convert the logs dictionary to a formatted JSON string
-    #     logs_list = json.dumps(self.logs, indent=4)
-    #     # Create byte version of JSON string
-    #     logs_list_byte = logs_list.encode("utf-8")
-    #     f = Fernet(self.key2)
-    #     encrypted_logs_data = f.encrypt(logs_list_byte)
-    #     async with aiofiles.open(self.logs_file, "wb") as file:
-    #         await file.write(encrypted_logs_data)
-    #     # Copy data to backup file
-    #     async with aiofiles.open(self.logs_file, "rb") as fileone, \
-    #             aiofiles.open(self.backup_logs_file, "wb") as filetwo:
-    #         async for line in fileone:
-    #             await filetwo.write(line)
 
     def _generate_stats(self, sender_contact: str, msg: str) -> str:
         """Generate message statistics for one or all users.
