@@ -1,5 +1,6 @@
 # TransLingo
-![TransLingo_logo](images/TransLingo_logo.png)
+
+![image](https://user-images.githubusercontent.com/62478826/233721770-e570ad14-42aa-46bd-9dbf-1e656350d721.png)
 
 ## About
 
