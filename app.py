@@ -7,6 +7,7 @@ Functions:
         another group chat, another bot would have to be created with its own
         endpoint function and its own Twilio number)
 """
+import html
 from typing import List, Tuple
 
 from flask import Flask, Request, request
@@ -27,10 +28,10 @@ def _get_incoming_msg(req: Request) -> Tuple[str, str, List[str]]:
         The message contents, sender contact info, sender name, and media URLs
             from a POST request to the bot.
     """
-    msg: str = req.values.get(
+    msg: str = html.escape(req.values.get(
         "Body",
         default="Hello, world",
-        type=str).strip()  # type: ignore [union-attr]
+        type=str).strip())  # type: ignore [union-attr]
     sender_contact: str = req.values.get(
         "From", type=str)  # type: ignore [assignment]
     media_urls = [req.values[k]
