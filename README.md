@@ -9,9 +9,9 @@
   <img src="https://img.shields.io/badge/vulnerabilities-2-important" alt="Snyk vulnerabilities report." />
 </p>
 
-<div style="text-align: center;">
+<p align="center">
     <img src="https://user-images.githubusercontent.com/62478826/233721919-cdcd0502-8a07-4554-9e5b-08cc173e36e3.png" alt="TransLingo Logo">
-</div>
+</p>
 
 ## About
 
