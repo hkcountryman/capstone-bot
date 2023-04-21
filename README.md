@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/62478826/233721919-cdcd0502-8a07-4554-9e5b-08cc173e36e3.png" alt="TransLingo Logo">
+    <img src="images/TransLingo_logo.png">
 </p>
 
 ## About
