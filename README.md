@@ -1,5 +1,5 @@
 # TransLingo
-![TransLing_logo](images/chatbot_logo.png)
+![TransLingo_logo](images/chatbot_logo.png)
 
 ## About
 
