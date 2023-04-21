@@ -32,8 +32,8 @@ def _get_incoming_msg(req: Request) -> Tuple[str, str, List[str]]:
         "Body",
         default="Hello, world",
         type=str).strip())  # type: ignore [union-attr]
-    sender_contact: str = req.values.get(
-        "From", type=str)  # type: ignore [assignment]
+    sender_contact: str = html.escape(req.values.get(
+        "From", type=str))  # type: ignore [union-attr,assignment,type-var]
     media_urls = [req.values[k]
                   for k in req.values.keys() if k.startswith("MediaUrl")]
     return (msg, sender_contact, media_urls)
