@@ -6,7 +6,7 @@
   </a>
   <img src="https://img.shields.io/badge/platform-linux-blue" alt="Supported platform: Linux." />
   <img src="https://img.shields.io/badge/python-%5E3.10-blue" alt="Python version: 3.10+." />
-  <img src="https://img.shields.io/badge/vulnerabilities-2-important" alt="Snyk vulnerabilities report." />
+  <img src="https://img.shields.io/badge/vulnerabilities-1-important" alt="Snyk vulnerabilities report." />
 </p>
 
 <p align="center">
