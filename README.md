@@ -1,4 +1,5 @@
 # TransLingo
+![TransLingo_logo](images/TransLingo_logo.png)
 
 ## About
 
