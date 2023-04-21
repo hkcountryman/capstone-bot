@@ -1,4 +1,5 @@
 # TransLingo
+![chatbot_logo](https://user-images.githubusercontent.com/64507274/233568257-67f22fb0-691e-4d82-893a-06750c78db85.png)
 
 ## About
 
